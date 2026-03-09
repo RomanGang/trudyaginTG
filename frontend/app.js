@@ -115,6 +115,9 @@ function getPendingReferral() {
 
 // ==================== API Functions ====================
 async function apiCall(endpoint, method = 'GET', body = null) {
+  const url = `${API_BASE}/api${endpoint}`;
+  console.log('API call:', method, url);
+  
   const options = {
     method,
     headers: { 'Content-Type': 'application/json' }
@@ -125,8 +128,12 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   }
   
   try {
-    const response = await fetch(`${API_BASE}/api${endpoint}`, options);
+    console.log('Fetching...');
+    const response = await fetch(url, options);
+    console.log('Response status:', response.status);
+    
     const data = await response.json();
+    console.log('Response data:', data);
     
     if (!response.ok) {
       throw new Error(data.error || 'API Error');
