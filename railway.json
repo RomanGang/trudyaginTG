@@ -1,8 +1,9 @@
 {
   "$schema": "https://railway.app/schema.json",
   "build": {
-    "builder": "NIXPACKS_NODE_BUILDER",
-    "nodeVersion": "20"
+    "builder": "nixpacks",
+    "buildCommand": "npm install",
+    "startCommand": "npm start"
   },
   "deploy": {
     "numReplicas": 1,
