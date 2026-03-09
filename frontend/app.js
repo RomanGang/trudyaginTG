@@ -129,7 +129,13 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   
   try {
     console.log('Fetching...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    options.signal = controller.signal;
+    
     const response = await fetch(url, options);
+    clearTimeout(timeoutId);
+    
     console.log('Response status:', response.status);
     
     const data = await response.json();
@@ -141,8 +147,12 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     
     return data;
   } catch (error) {
-    console.error('API Error:', error);
-    showToast(error.message, 'error');
+    console.error('API Error:', error.name, error.message);
+    if (error.name === 'AbortError') {
+      showToast('Время ожидания истекло', 'error');
+    } else {
+      showToast(error.message, 'error');
+    }
     throw error;
   }
 }
