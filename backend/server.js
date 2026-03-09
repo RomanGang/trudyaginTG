@@ -37,29 +37,26 @@ db.get('SELECT 1', [], (err) => {
 
 // Create or update user
 app.post('/api/user', (req, res) => {
+  console.log('POST /api/user called', req.body);
+  
   const { telegram_id, name, phone, role, city, district, skills, referred_by } = req.body;
 
   if (!telegram_id || !name || !role) {
     return res.status(400).json({ error: 'telegram_id, name, and role are required' });
   }
 
+  // SQLite: use INSERT OR REPLACE
   const sql = `
-    INSERT INTO users (telegram_id, name, phone, role, city, district, skills, referred_by)
+    INSERT OR REPLACE INTO users (telegram_id, name, phone, role, city, district, skills, referred_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(telegram_id) DO UPDATE SET
-      name = excluded.name,
-      phone = COALESCE(excluded.phone, users.phone),
-      role = excluded.role,
-      city = COALESCE(excluded.city, users.city),
-      district = COALESCE(excluded.district, users.district),
-      skills = COALESCE(excluded.skills, users.skills),
-      referred_by = COALESCE(users.referred_by, excluded.referred_by)
   `;
 
   db.run(sql, [telegram_id, name, phone || null, role, city || null, district || null, skills || null, referred_by || null], function(err) {
     if (err) {
+      console.error('DB Error:', err.message);
       return res.status(500).json({ error: err.message });
     }
+    console.log('User saved:', telegram_id);
     res.json({ success: true, user_id: telegram_id });
   });
 });
