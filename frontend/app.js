@@ -1323,6 +1323,25 @@ function setupRegistration() {
     document.getElementById('regForm').style.display = 'block';
   };
   
+  // Test button
+  document.getElementById('testBtn').onclick = function() {
+    console.log('Testing API...');
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API_BASE + '/api/test-user', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+      console.log('Test response:', xhr.status, xhr.responseText);
+    };
+    xhr.onerror = function() {
+      console.error('Test error');
+    };
+    xhr.ontimeout = function() {
+      console.error('Test timeout');
+    };
+    xhr.timeout = 10000;
+    xhr.send(JSON.stringify({test: 'data'}));
+  };
+  
   // City change - update districts
   document.getElementById('regCity').onchange = function() {
     const city = this.value;

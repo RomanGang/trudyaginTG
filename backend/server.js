@@ -34,6 +34,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Simple test endpoint - no DB
+app.post('/api/test-user', (req, res) => {
+  console.log('TEST /api/test-user called', req.body);
+  res.json({ success: true, received: req.body });
+});
+
 // Initialize database
 db.get('SELECT 1', [], (err) => {
   if (err) {
@@ -51,7 +57,10 @@ app.post('/api/user', (req, res) => {
   
   const { telegram_id, name, phone, role, city, district, skills, referred_by } = req.body;
 
+  console.log('Parsed body:', { telegram_id, name, role });
+  
   if (!telegram_id || !name || !role) {
+    console.log('Missing required fields');
     return res.status(400).json({ error: 'telegram_id, name, and role are required' });
   }
 
@@ -60,6 +69,8 @@ app.post('/api/user', (req, res) => {
     INSERT OR REPLACE INTO users (telegram_id, name, phone, role, city, district, skills, referred_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
+  
+  console.log('Running SQL...');
 
   db.run(sql, [telegram_id, name, phone || null, role, city || null, district || null, skills || null, referred_by || null], function(err) {
     if (err) {
