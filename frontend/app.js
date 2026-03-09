@@ -1082,29 +1082,11 @@ function setupFilters() {
 
 // ==================== Form Handlers ====================
 function setupForms() {
-  // Registration
-  document.getElementById('registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    await registerUser({
-      name: form.regName.value,
-      role: form.role.value,
-      city: form.regCity.value,
-      district: form.regDistrict.value
-    });
-  });
-  
-  // City/District for registration
-  const regCity = document.getElementById('regCity');
-  const regDistrict = document.getElementById('regDistrict');
-  regCity.addEventListener('change', () => updateDistrictOptions(regCity, regDistrict));
-  
-  // Create Job
+  // Create Job Form
   document.getElementById('createJobForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
     
-    // Set min date to today
     const today = new Date().toISOString().split('T')[0];
     form.jobDate.min = today;
     
@@ -1125,8 +1107,10 @@ function setupForms() {
   // City/District for create job
   const jobCity = document.getElementById('jobCity');
   const jobDistrict = document.getElementById('jobDistrict');
-  jobCity.addEventListener('change', () => updateDistrictOptions(jobCity, jobDistrict));
-  
+  if (jobCity && jobDistrict) {
+    jobCity.addEventListener('change', () => updateDistrictOptions(jobCity, jobDistrict));
+  }
+
   // Profile
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1264,67 +1248,70 @@ function showToast(message, type = 'info') {
 
 // ==================== Initialize ====================
 document.addEventListener('DOMContentLoaded', () => {
+  // Check if user is already logged in
+  const savedUser = localStorage.getItem('trudyagin_user');
+  
+  if (savedUser) {
+    // User already registered, skip entrance
+    document.getElementById('entranceOverlay').style.display = 'none';
+    document.getElementById('registrationScreen').style.display = 'none';
+  }
+  
   // Run entrance animation
-  runEntranceAnimation();
+  setTimeout(() => {
+    const overlay = document.getElementById('entranceOverlay');
+    overlay.style.transition = 'opacity 0.3s';
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      setupRegistration();
+    }, 300);
+  }, 1500);
   
   setupNavigation();
   setupForms();
   setupFilters();
   initAuth();
-  
-  // Send viewport height to Telegram
   tg.ready();
 });
 
-// ==================== Entrance Animation ====================
-function runEntranceAnimation() {
-  const overlay = document.getElementById('entranceOverlay');
+// ==================== Registration ====================
+function setupRegistration() {
+  const regScreen = document.getElementById('registrationScreen');
+  regScreen.style.display = 'block';
   
-  // After 2 seconds, hide entrance and show registration
-  setTimeout(() => {
-    overlay.classList.add('fade-out');
-    setTimeout(() => {
-      overlay.style.display = 'none';
-      showRegistrationScreen();
-    }, 500);
-  }, 2000);
-}
-
-// ==================== Registration Screen ====================
-function showRegistrationScreen() {
-  const screen = document.getElementById('registrationScreen');
-  screen.classList.remove('hidden');
-  
-  // Role selection
-  const roleBtns = document.querySelectorAll('.role-btn');
   let selectedRole = null;
+  const roleBtns = document.querySelectorAll('.role-btn');
   
   roleBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      roleBtns.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
+      roleBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
       selectedRole = btn.dataset.role;
       
-      // Show form
-      document.getElementById('roleSelection').style.display = 'none';
-      document.getElementById('regForm').classList.add('visible');
+      document.getElementById('roleBox').style.display = 'none';
+      document.getElementById('regForm').classList.add('show');
     });
   });
   
-  // Form submission
+  // City change handler
+  const regCity = document.getElementById('regCity');
+  const regDistrict = document.getElementById('regDistrict');
+  regCity.addEventListener('change', () => updateDistrictOptions(regCity, regDistrict));
+  
+  // Form submit
   document.getElementById('regForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const name = document.getElementById('regName').value;
-    const city = document.getElementById('regCity').value;
-    const district = document.getElementById('regDistrict').value;
     
     if (!selectedRole) {
       showToast('Выберите роль', 'error');
       return;
     }
     
-    // Register user
+    const name = document.getElementById('regName').value;
+    const city = document.getElementById('regCity').value;
+    const district = document.getElementById('regDistrict').value;
+    
     await registerUser({
       name: name,
       role: selectedRole,
@@ -1332,12 +1319,6 @@ function showRegistrationScreen() {
       district: district
     });
     
-    // Hide registration screen
-    screen.classList.add('hidden');
+    regScreen.style.display = 'none';
   });
-  
-  // City/District for registration
-  const regCity = document.getElementById('regCity');
-  const regDistrict = document.getElementById('regDistrict');
-  regCity.addEventListener('change', () => updateDistrictOptions(regCity, regDistrict));
 }

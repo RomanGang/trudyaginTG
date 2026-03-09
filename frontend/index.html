@@ -11,33 +11,32 @@
 <body>
   <!-- Animated Entrance -->
   <div class="entrance-overlay" id="entranceOverlay">
-    <div class="logo-container">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" opacity="0.9"/>
-          <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="logo-text">Трудягин</div>
-      <div class="logo-subtitle">заработок рядом</div>
-      <div class="entrance-spinner"></div>
+    <div class="logo-box">
+      <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="60" height="60" rx="14" fill="#007AFF"/>
+        <path d="M30 10L15 20V40L30 50L45 40V20L30 10Z" fill="white"/>
+        <path d="M30 20L20 26V38L30 44L40 38V26L30 20Z" fill="#007AFF"/>
+        <circle cx="30" cy="32" r="5" fill="white"/>
+      </svg>
     </div>
+    <div class="logo-title">Трудягин</div>
+    <div class="logo-subtitle">заработок рядом</div>
   </div>
 
-  <!-- Registration Screen -->
-  <div class="registration-screen hidden" id="registrationScreen">
+  <!-- Registration -->
+  <div class="registration-screen" id="registrationScreen" style="display:none;">
     <div class="reg-logo">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" opacity="0.9"/>
-        <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="60" height="60" rx="14" fill="#007AFF"/>
+        <path d="M30 10L15 20V40L30 50L45 40V20L30 10Z" fill="white"/>
+        <path d="M30 20L20 26V38L30 44L40 38V26L30 20Z" fill="#007AFF"/>
+        <circle cx="30" cy="32" r="5" fill="white"/>
       </svg>
     </div>
     <h1 class="reg-title">Добро пожаловать!</h1>
-    <p class="reg-subtitle">Найди работу или найди исполнителя за считанные минуты</p>
+    <p class="reg-subtitle">Выберите вашу роль</p>
     
-    <div class="role-selection" id="roleSelection">
+    <div class="role-box" id="roleBox">
       <button class="role-btn" data-role="worker">
         <div class="role-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -53,7 +52,7 @@
       <button class="role-btn" data-role="employer">
         <div class="role-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
             <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
           </svg>
         </div>
@@ -66,11 +65,11 @@
 
     <form class="reg-form" id="regForm">
       <div class="form-group">
-        <label for="regName">Ваше имя</label>
-        <input type="text" id="regName" required placeholder="Иван Иванов">
+        <label>Ваше имя</label>
+        <input type="text" id="regName" placeholder="Иван Иванов" required>
       </div>
       <div class="form-group">
-        <label for="regCity">Город</label>
+        <label>Город</label>
         <select id="regCity" required>
           <option value="">Выберите город</option>
           <option value="Москва">Москва</option>
@@ -82,12 +81,12 @@
         </select>
       </div>
       <div class="form-group">
-        <label for="regDistrict">Район</label>
+        <label>Район</label>
         <select id="regDistrict">
           <option value="">Сначала выберите город</option>
         </select>
       </div>
-      <button type="submit" class="btn-primary">Начать работу</button>
+      <button type="submit" class="btn-primary">Продолжить</button>
     </form>
   </div>
 
