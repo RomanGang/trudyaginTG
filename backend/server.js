@@ -69,16 +69,9 @@ app.post('/api/user', (req, res) => {
 // Get user by telegram_id
 app.get('/api/user/:telegram_id', (req, res) => {
   const { telegram_id } = req.params;
-
-  db.get('SELECT * FROM users WHERE telegram_id = ?', [telegram_id], (err, user) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.json(user);
-  });
+  
+  // Return not found - no DB for now
+  res.status(404).json({ error: 'User not found' });
 });
 
 // Update user profile

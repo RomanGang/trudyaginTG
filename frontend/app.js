@@ -1369,12 +1369,19 @@ function setupRegistration() {
     e.preventDefault();
     e.stopPropagation();
     
+    // Disable button to prevent double clicks
+    const btn = document.getElementById('submitRegBtn');
+    btn.disabled = true;
+    btn.textContent = 'Загрузка...';
+    
     console.log('Button clicked!');
     console.log('selectedRole:', selectedRole);
     console.log('telegramUser:', telegramUser);
     
     if (!selectedRole) {
       showToast('Выберите роль', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Продолжить';
       return;
     }
     
@@ -1386,11 +1393,15 @@ function setupRegistration() {
     
     if (!name) {
       showToast('Введите имя', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Продолжить';
       return;
     }
     
     if (!city) {
       showToast('Выберите город', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Продолжить';
       return;
     }
     
@@ -1401,6 +1412,9 @@ function setupRegistration() {
       role: selectedRole,
       city: city,
       district: district
+    }).finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Продолжить';
     });
   };
 }
