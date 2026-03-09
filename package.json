@@ -11,5 +11,8 @@
   "license": "ISC",
   "devDependencies": {
     "vercel": "^50.28.0"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
   }
 }

@@ -2,15 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    },
-    {
       "src": "backend/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -19,11 +12,16 @@
       "dest": "backend/server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
+      "src": "/",
+      "dest": "/frontend/index.html"
+    },
+    {
+      "src": "/(.+\\.(js|css|png|jpg|jpeg|svg|ico)$)",
+      "dest": "/frontend/$1"
+    },
+    {
+      "src": "/(.+)",
+      "dest": "/frontend/index.html"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
