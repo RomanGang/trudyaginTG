@@ -1264,6 +1264,9 @@ function showToast(message, type = 'info') {
 
 // ==================== Initialize ====================
 document.addEventListener('DOMContentLoaded', () => {
+  // Run entrance animation
+  runEntranceAnimation();
+  
   setupNavigation();
   setupForms();
   setupFilters();
@@ -1272,3 +1275,69 @@ document.addEventListener('DOMContentLoaded', () => {
   // Send viewport height to Telegram
   tg.ready();
 });
+
+// ==================== Entrance Animation ====================
+function runEntranceAnimation() {
+  const overlay = document.getElementById('entranceOverlay');
+  
+  // After 2 seconds, hide entrance and show registration
+  setTimeout(() => {
+    overlay.classList.add('fade-out');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      showRegistrationScreen();
+    }, 500);
+  }, 2000);
+}
+
+// ==================== Registration Screen ====================
+function showRegistrationScreen() {
+  const screen = document.getElementById('registrationScreen');
+  screen.classList.remove('hidden');
+  
+  // Role selection
+  const roleBtns = document.querySelectorAll('.role-btn');
+  let selectedRole = null;
+  
+  roleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      roleBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedRole = btn.dataset.role;
+      
+      // Show form
+      document.getElementById('roleSelection').style.display = 'none';
+      document.getElementById('regForm').classList.add('visible');
+    });
+  });
+  
+  // Form submission
+  document.getElementById('regForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const name = document.getElementById('regName').value;
+    const city = document.getElementById('regCity').value;
+    const district = document.getElementById('regDistrict').value;
+    
+    if (!selectedRole) {
+      showToast('Выберите роль', 'error');
+      return;
+    }
+    
+    // Register user
+    await registerUser({
+      name: name,
+      role: selectedRole,
+      city: city,
+      district: district
+    });
+    
+    // Hide registration screen
+    screen.classList.add('hidden');
+  });
+  
+  // City/District for registration
+  const regCity = document.getElementById('regCity');
+  const regDistrict = document.getElementById('regDistrict');
+  regCity.addEventListener('change', () => updateDistrictOptions(regCity, regDistrict));
+}
