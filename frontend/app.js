@@ -170,18 +170,29 @@ async function registerUser(data) {
     referred_by: referredBy || null
   };
   
-  await apiCall('/user', 'POST', userData);
-  currentUser = userData;
-  
-  showLoggedInState();
-  showToast('Добро пожаловать в Trudyagin!', 'success');
-  
-  // Redirect based on role
-  if (data.role === 'employer') {
-    showPage('create-job');
-  } else {
-    showPage('jobs');
-    loadJobs();
+  try {
+    await apiCall('/user', 'POST', userData);
+    currentUser = userData;
+    
+    // Save to localStorage
+    localStorage.setItem('trudyagin_user', JSON.stringify(currentUser));
+    
+    // Hide registration screen
+    document.getElementById('registrationScreen').style.display = 'none';
+    
+    showLoggedInState();
+    showToast('Добро пожаловать в Trudyagin!', 'success');
+    
+    // Redirect based on role
+    if (data.role === 'employer') {
+      showPage('create-job');
+    } else {
+      showPage('jobs');
+      loadJobs();
+    }
+  } catch (err) {
+    console.error('Registration error:', err);
+    showToast('Ошибка регистрации: ' + err.message, 'error');
   }
 }
 
@@ -1252,23 +1263,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedUser = localStorage.getItem('trudyagin_user');
   
   if (savedUser) {
-    // User already registered, skip entrance
-    document.getElementById('entranceOverlay').style.display = 'none';
+    // User already registered, hide registration
     document.getElementById('registrationScreen').style.display = 'none';
-  } else {
-    // Run entrance animation - hide after 1.5 seconds and show registration
-    setTimeout(() => {
-      const overlay = document.getElementById('entranceOverlay');
-      if (overlay) overlay.style.display = 'none';
-      
-      const regScreen = document.getElementById('registrationScreen');
-      if (regScreen) {
-        regScreen.style.display = 'block';
-        setupRegistration();
-      }
-    }, 1500);
   }
   
+  setupRegistration();
   setupNavigation();
   setupForms();
   setupFilters();
@@ -1278,78 +1277,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== Registration ====================
 function setupRegistration() {
-  console.log('Setting up registration');
-  
-  const regScreen = document.getElementById('registrationScreen');
-  const roleBox = document.getElementById('roleBox');
-  const regForm = document.getElementById('regForm');
-  const roleBtns = document.querySelectorAll('.role-btn');
-  
-  if (!regScreen || !roleBtns.length) {
-    console.error('Registration elements not found');
-    return;
-  }
-  
   let selectedRole = null;
   
-  roleBtns.forEach(btn => {
-    btn.onclick = function() {
-      roleBtns.forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      selectedRole = this.dataset.role;
-      
-      roleBox.style.display = 'none';
-      regForm.classList.add('show');
-    };
-  });
+  // Worker button
+  document.getElementById('btnWorker').onclick = function() {
+    selectedRole = 'worker';
+    document.getElementById('roleBox').style.display = 'none';
+    document.getElementById('regForm').style.display = 'block';
+  };
   
-  // Pre-fill name from Telegram
-  const nameInput = document.getElementById('regName');
-  if (nameInput && telegramUser && telegramUser.first_name) {
-    nameInput.value = telegramUser.first_name;
-  }
+  // Employer button
+  document.getElementById('btnEmployer').onclick = function() {
+    selectedRole = 'employer';
+    document.getElementById('roleBox').style.display = 'none';
+    document.getElementById('regForm').style.display = 'block';
+  };
   
-  // City change handler
-  const regCity = document.getElementById('regCity');
-  const regDistrict = document.getElementById('regDistrict');
-  if (regCity) {
-    regCity.onchange = function() {
-      updateDistrictOptions(regCity, regDistrict);
+  // City change - update districts
+  document.getElementById('regCity').onchange = function() {
+    const city = this.value;
+    const district = document.getElementById('regDistrict');
+    district.innerHTML = '<option value="">Выберите район</option>';
+    
+    const districts = {
+      'Москва': ['Центр', 'Север', 'Юг', 'Восток', 'Запад', 'СЗАО', 'САО', 'СВАО', 'ВАО', 'ЮВАО', 'ЮЗАО', 'ТиНАО'],
+      'Санкт-Петербург': ['Центр', 'Невский', 'Василеостровский', 'Петроградский', 'Приморский', 'Красносельский', 'Московский'],
+      'Казань': ['Вахитовский', 'Ново-Савиновский', 'Авиастроительный', 'Кировский', 'Московский'],
+      'Екатеринбург': ['Центр', 'Верх-Исетский', 'Ленинский', 'Октябрьский', 'Железнодорожный', 'Кировский'],
+      'Верхняя Пышма': ['Успенский', 'Клязьма', 'Шахтовская'],
+      'Ростов-на-Дону': ['Центр', 'Пролетарский', 'Первомайский', 'Советский', 'Октябрьский']
     };
-  }
+    
+    if (districts[city]) {
+      districts[city].forEach(d => {
+        district.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+    }
+  };
   
   // Form submit
-  if (regForm) {
-    regForm.onsubmit = async function(e) {
-      e.preventDefault();
-      
-      if (!selectedRole) {
-        showToast('Выберите роль', 'error');
-        return;
-      }
-      
-      const name = document.getElementById('regName').value.trim();
-      const city = document.getElementById('regCity').value;
-      const district = document.getElementById('regDistrict').value;
-      
-      if (!name) {
-        showToast('Введите имя', 'error');
-        return;
-      }
-      
-      try {
-        await registerUser({
-          name: name,
-          role: selectedRole,
-          city: city,
-          district: district
-        });
-        
-        regScreen.style.display = 'none';
-      } catch (err) {
-        console.error('Registration error:', err);
-        showToast('Ошибка регистрации', 'error');
-      }
-    };
-  }
+  document.getElementById('regForm').onsubmit = function(e) {
+    e.preventDefault();
+    
+    if (!selectedRole) {
+      showToast('Выберите роль', 'error');
+      return;
+    }
+    
+    const name = document.getElementById('regName').value.trim();
+    const city = document.getElementById('regCity').value;
+    const district = document.getElementById('regDistrict').value;
+    
+    if (!name) {
+      showToast('Введите имя', 'error');
+      return;
+    }
+    
+    if (!city) {
+      showToast('Выберите город', 'error');
+      return;
+    }
+    
+    // Call API to register
+    registerUser({
+      name: name,
+      role: selectedRole,
+      city: city,
+      district: district
+    });
+  };
+}
+
+// Legacy function for compatibility
+function runEntranceAnimation() {
+  // No animation - simplified
 }

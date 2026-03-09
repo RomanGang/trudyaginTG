@@ -157,11 +157,12 @@ if (usePostgres) {
   })();
   
 } else {
-  // SQLite for local development
+  // SQLite for local development / Railway
   const sqlite3 = require('sqlite3').verbose();
   
-  // Use /tmp for Vercel (ephemeral filesystem) or local path for development
-  const dbPath = process.env.VERCEL ? '/tmp/trudyagin.db' : path.join(__dirname, '..', 'database', 'trudyagin.db');
+  // Use /tmp for Railway/Vercel (ephemeral filesystem) or local path for development
+  const isEphemeral = process.env.RAILWAY_ENVIRONMENT || process.env.VERCEL;
+  const dbPath = isEphemeral ? '/tmp/trudyagin.db' : path.join(__dirname, '..', 'database', 'trudyagin.db');
   
   db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
