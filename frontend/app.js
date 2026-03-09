@@ -1302,23 +1302,38 @@ function setupRegistration() {
   // Form submit
   document.getElementById('regForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Form submitted', { selectedRole });
     
     if (!selectedRole) {
       showToast('Выберите роль', 'error');
       return;
     }
     
-    const name = document.getElementById('regName').value;
+    const name = document.getElementById('regName').value.trim();
     const city = document.getElementById('regCity').value;
     const district = document.getElementById('regDistrict').value;
     
-    await registerUser({
-      name: name,
-      role: selectedRole,
-      city: city,
-      district: district
-    });
+    console.log('Registering:', { name, role: selectedRole, city, district });
     
-    regScreen.style.display = 'none';
+    if (!name) {
+      showToast('Введите имя', 'error');
+      return;
+    }
+    
+    try {
+      await registerUser({
+        name: name,
+        role: selectedRole,
+        city: city,
+        district: district
+      });
+      
+      regScreen.style.display = 'none';
+    } catch (err) {
+      console.error('Registration error:', err);
+      showToast('Ошибка регистрации', 'error');
+    }
   });
 }
