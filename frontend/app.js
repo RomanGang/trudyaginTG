@@ -156,6 +156,9 @@ async function initAuth() {
 }
 
 async function registerUser(data) {
+  console.log('registerUser called:', data);
+  console.log('telegramUser.id:', telegramUser.id);
+  
   // Get referral parameter if available
   const referredBy = getPendingReferral();
   
@@ -170,8 +173,12 @@ async function registerUser(data) {
     referred_by: referredBy || null
   };
   
+  console.log('Sending to API:', userData);
+  
   try {
-    await apiCall('/user', 'POST', userData);
+    const result = await apiCall('/user', 'POST', userData);
+    console.log('API result:', result);
+    
     currentUser = userData;
     
     // Save to localStorage
@@ -1318,6 +1325,11 @@ function setupRegistration() {
   // Form submit
   document.getElementById('regForm').onsubmit = function(e) {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Form submitted!');
+    console.log('selectedRole:', selectedRole);
+    console.log('telegramUser:', telegramUser);
     
     if (!selectedRole) {
       showToast('Выберите роль', 'error');
@@ -1327,6 +1339,8 @@ function setupRegistration() {
     const name = document.getElementById('regName').value.trim();
     const city = document.getElementById('regCity').value;
     const district = document.getElementById('regDistrict').value;
+    
+    console.log('Form data:', { name, city, district });
     
     if (!name) {
       showToast('Введите имя', 'error');
@@ -1339,6 +1353,7 @@ function setupRegistration() {
     }
     
     // Call API to register
+    console.log('Calling registerUser...');
     registerUser({
       name: name,
       role: selectedRole,
