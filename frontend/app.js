@@ -51,7 +51,7 @@ const paymentTypes = ["Почасовая", "За смену", "Договорн
 // ==================== State ====================
 let currentUser = null;
 let currentPage = 'home';
-let jobFilters = { city: '', district: '', min_payment: '', category: '', schedule: '', payment_type: '' };
+let jobFilters = { city: '', district: '', min_payment: '', category: '', schedule: '', payment_type: '', when: '' };
 let myJobsTab = 'created';
 
 // ==================== Telegram WebApp ====================
@@ -324,6 +324,7 @@ async function loadJobs() {
     if (jobFilters.category) params.append('category', jobFilters.category);
     if (jobFilters.schedule) params.append('schedule', jobFilters.schedule);
     if (jobFilters.payment_type) params.append('payment_type', jobFilters.payment_type);
+    if (jobFilters.when) params.append('when', jobFilters.when);
     
     const jobs = await apiCall(`/jobs?${params.toString()}`);
     
@@ -1087,6 +1088,32 @@ function updateDistrictOptions(citySelect, districtSelect) {
 
 // ==================== Filters ====================
 function setupFilters() {
+  // Quick filters (today, tomorrow, weekend, hourly, shift)
+  const quickFilters = document.querySelectorAll('.quick-filter');
+  quickFilters.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      quickFilters.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Set filter
+      const filter = btn.dataset.filter;
+      jobFilters.when = filter === 'all' ? '' : filter;
+      
+      // Update button text for hourly/shift
+      if (filter === 'hour') {
+        jobFilters.payment_type = 'hour';
+      } else if (filter === 'shift') {
+        jobFilters.payment_type = 'shift';
+      } else {
+        jobFilters.payment_type = '';
+      }
+      
+      loadJobs();
+    });
+  });
+  
+  // Advanced filters
   const cityFilter = document.getElementById('cityFilter');
   const districtFilter = document.getElementById('districtFilter');
   const categoryFilter = document.getElementById('categoryFilter');
