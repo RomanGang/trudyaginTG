@@ -118,33 +118,49 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   const url = `${API_BASE}/api${endpoint}`;
   console.log('API call:', method, url);
   
-  const options = {
-    method,
-    headers: { 'Content-Type': 'application/json' }
-  };
-  
-  if (body) {
-    options.body = JSON.stringify(body);
-  }
-  
-  try {
-    console.log('Fetching...');
-    const response = await fetch(url, options);
-    console.log('Response status:', response.status);
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
     
-    const data = await response.json();
-    console.log('Response data:', data);
+    xhr.onload = function() {
+      console.log('Response status:', xhr.status);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          console.log('Response data:', data);
+          resolve(data);
+        } catch(e) {
+          resolve(xhr.responseText);
+        }
+      } else {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          reject(new Error(data.error || 'API Error'));
+        } catch(e) {
+          reject(new Error('API Error'));
+        }
+      }
+    };
     
-    if (!response.ok) {
-      throw new Error(data.error || 'API Error');
+    xhr.onerror = function() {
+      console.error('Network error');
+      reject(new Error('Ошибка сети'));
+    };
+    
+    xhr.ontimeout = function() {
+      console.error('Timeout');
+      reject(new Error('Время ожидания истекло'));
+    };
+    
+    xhr.timeout = 15000; // 15 second timeout
+    
+    if (body) {
+      xhr.send(JSON.stringify(body));
+    } else {
+      xhr.send();
     }
-    
-    return data;
-  } catch (error) {
-    console.error('API Error:', error);
-    showToast('Ошибка соединения: ' + error.message, 'error');
-    throw error;
-  }
+  });
 }
 
 // ==================== Auth ====================
