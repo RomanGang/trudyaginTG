@@ -23,25 +23,26 @@ db.get('SELECT 1', [], (err) => {
 
 // Create or update user
 app.post('/api/user', (req, res) => {
-  const { telegram_id, name, phone, role, city, district, skills } = req.body;
+  const { telegram_id, name, phone, role, city, district, skills, referred_by } = req.body;
 
   if (!telegram_id || !name || !role) {
     return res.status(400).json({ error: 'telegram_id, name, and role are required' });
   }
 
   const sql = `
-    INSERT INTO users (telegram_id, name, phone, role, city, district, skills)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO users (telegram_id, name, phone, role, city, district, skills, referred_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(telegram_id) DO UPDATE SET
       name = excluded.name,
       phone = COALESCE(excluded.phone, users.phone),
       role = excluded.role,
       city = COALESCE(excluded.city, users.city),
       district = COALESCE(excluded.district, users.district),
-      skills = COALESCE(excluded.skills, users.skills)
+      skills = COALESCE(excluded.skills, users.skills),
+      referred_by = COALESCE(users.referred_by, excluded.referred_by)
   `;
 
-  db.run(sql, [telegram_id, name, phone || null, role, city || null, district || null, skills || null], function(err) {
+  db.run(sql, [telegram_id, name, phone || null, role, city || null, district || null, skills || null, referred_by || null], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -169,18 +170,20 @@ app.get('/api/notifications/:user_id', (req, res) => {
 
 // Create job
 app.post('/api/jobs', (req, res) => {
-  const { title, description, payment, city, district, date, employer_id } = req.body;
+  const { title, description, payment, city, district, date, employer_id, workers_required } = req.body;
 
   if (!title || !description || !payment || !city || !district || !date || !employer_id) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  const workersRequired = workers_required || 1;
+
   const sql = `
-    INSERT INTO jobs (title, description, payment, city, district, date, employer_id, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'open')
+    INSERT INTO jobs (title, description, payment, city, district, date, employer_id, status, workers_required, workers_joined)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, 0)
   `;
 
-  db.run(sql, [title, description, payment, city, district, date, employer_id], function(err) {
+  db.run(sql, [title, description, payment, city, district, date, employer_id, workersRequired], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -188,7 +191,7 @@ app.post('/api/jobs', (req, res) => {
   });
 });
 
-// Get job by ID
+// Get job by ID (public)
 app.get('/api/jobs/:id', (req, res) => {
   const { id } = req.params;
 
@@ -205,9 +208,28 @@ app.get('/api/jobs/:id', (req, res) => {
   });
 });
 
+// Get workers for a job
+app.get('/api/jobs/:id/workers', (req, res) => {
+  const { id } = req.params;
+
+  const sql = `
+    SELECT jw.*, u.name as worker_name
+    FROM job_workers jw
+    LEFT JOIN users u ON jw.worker_id = u.telegram_id
+    WHERE jw.job_id = ?
+  `;
+  
+  db.all(sql, [id], (err, workers) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(workers);
+  });
+});
+
 // ==================== RESPONSE ENDPOINTS ====================
 
-// Respond to job
+// Respond to job (for single-worker jobs - legacy)
 app.post('/api/respond', (req, res) => {
   const { job_id, worker_id } = req.body;
 
@@ -239,6 +261,132 @@ app.post('/api/respond', (req, res) => {
           return res.status(500).json({ error: err.message });
         }
         res.json({ success: true, response_id: this.lastID });
+      });
+    });
+  });
+});
+
+// Take Job - for multi-worker jobs
+app.post('/api/jobs/:id/take', (req, res) => {
+  const { id } = req.params;
+  const { worker_id } = req.body;
+
+  if (!worker_id) {
+    return res.status(400).json({ error: 'worker_id is required' });
+  }
+
+  // Get job
+  db.get('SELECT * FROM jobs WHERE id = ?', [id], (err, job) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    if (job.status !== 'open') {
+      return res.status(400).json({ error: 'Job is not open' });
+    }
+
+    const workersRequired = job.workers_required || 1;
+    const workersJoined = job.workers_joined || 0;
+
+    // Check if worker already joined
+    db.get('SELECT * FROM job_workers WHERE job_id = ? AND worker_id = ?', [id, worker_id], (err, existing) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (existing) {
+        return res.status(400).json({ error: 'You have already joined this job' });
+      }
+
+      // Check if more workers needed
+      if (workersJoined >= workersRequired) {
+        return res.status(400).json({ error: 'Job already has enough workers' });
+      }
+
+      // Add worker to job_workers table
+      db.run('INSERT INTO job_workers (job_id, worker_id) VALUES (?, ?)', [id, worker_id], function(err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        const newWorkersJoined = workersJoined + 1;
+        let newStatus = 'open';
+        
+        // If enough workers joined, change status to in_progress
+        if (newWorkersJoined >= workersRequired) {
+          newStatus = 'in_progress';
+        }
+
+        // Update job
+        db.run('UPDATE jobs SET workers_joined = ?, status = ? WHERE id = ?', 
+          [newWorkersJoined, newStatus, id], function(err) {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+          res.json({ 
+            success: true, 
+            workers_joined: newWorkersJoined,
+            workers_required: workersRequired,
+            status: newStatus,
+            message: newStatus === 'in_progress' ? 'Job is now in progress!' : 'You have joined the job!'
+          });
+        });
+      });
+    });
+  });
+});
+
+// Leave Job - worker can leave before job starts
+app.post('/api/jobs/:id/leave', (req, res) => {
+  const { id } = req.params;
+  const { worker_id } = req.body;
+
+  if (!worker_id) {
+    return res.status(400).json({ error: 'worker_id is required' });
+  }
+
+  // Get job
+  db.get('SELECT * FROM jobs WHERE id = ?', [id], (err, job) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    if (job.status !== 'open') {
+      return res.status(400).json({ error: 'Cannot leave job that has started' });
+    }
+
+    // Check if worker is in job_workers
+    db.get('SELECT * FROM job_workers WHERE job_id = ? AND worker_id = ?', [id, worker_id], (err, existing) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (!existing) {
+        return res.status(400).json({ error: 'You are not assigned to this job' });
+      }
+
+      // Remove worker from job_workers
+      db.run('DELETE FROM job_workers WHERE job_id = ? AND worker_id = ?', [id, worker_id], function(err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        const newWorkersJoined = (job.workers_joined || 1) - 1;
+
+        // Update job
+        db.run('UPDATE jobs SET workers_joined = ? WHERE id = ?', 
+          [newWorkersJoined, id], function(err) {
+          if (err) {
+            return res.status(500).json({ error: err.message });
+          }
+          res.json({ 
+            success: true, 
+            workers_joined: newWorkersJoined,
+            workers_required: job.workers_required || 1
+          });
+        });
       });
     });
   });
@@ -355,11 +503,21 @@ app.post('/api/jobs/:id/assign', (req, res) => {
 app.post('/api/jobs/:id/complete', (req, res) => {
   const { id } = req.params;
 
-  db.run('UPDATE jobs SET status = ? WHERE id = ?', ['completed', id], function(err) {
+  // Get job to check if it's multi-worker
+  db.get('SELECT * FROM jobs WHERE id = ?', [id], (err, job) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true });
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    db.run('UPDATE jobs SET status = ? WHERE id = ?', ['completed', id], function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ success: true });
+    });
   });
 });
 

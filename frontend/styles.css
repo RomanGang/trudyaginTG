@@ -1247,3 +1247,68 @@ select:disabled {
 
 .mt-4 { margin-top: 16px; }
 .mb-4 { margin-bottom: 16px; }
+
+/* ==================== Multi-Worker Job Styles ==================== */
+.workers-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.job-card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.workers-section {
+  background: var(--background-secondary);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.workers-progress {
+  margin-bottom: 12px;
+}
+
+.workers-count {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--success);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.workers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.worker-item {
+  padding: 8px 12px;
+  background: var(--background);
+  border-radius: 6px;
+  font-size: 14px;
+}

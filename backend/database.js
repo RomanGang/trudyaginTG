@@ -27,7 +27,9 @@ function initializeTables() {
       job_publish_price REAL DEFAULT 0,
       premium_worker INTEGER DEFAULT 0,
       commission_percent REAL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      referred_by INTEGER DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (referred_by) REFERENCES users(telegram_id)
     )
   `);
 
@@ -44,9 +46,24 @@ function initializeTables() {
       employer_id INTEGER NOT NULL,
       worker_id INTEGER,
       status TEXT CHECK(status IN ('open', 'in_progress', 'completed')) DEFAULT 'open',
+      workers_required INTEGER DEFAULT 1,
+      workers_joined INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (employer_id) REFERENCES users(telegram_id),
       FOREIGN KEY (worker_id) REFERENCES users(telegram_id)
+    )
+  `);
+
+  // Job Workers table - tracks workers assigned to multi-worker jobs
+  db.run(`
+    CREATE TABLE IF NOT EXISTS job_workers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL,
+      worker_id INTEGER NOT NULL,
+      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (job_id) REFERENCES jobs(id),
+      FOREIGN KEY (worker_id) REFERENCES users(telegram_id),
+      UNIQUE(job_id, worker_id)
     )
   `);
 
@@ -80,6 +97,17 @@ function initializeTables() {
       UNIQUE(from_user, job_id)
     )
   `);
+
+  // Add new columns to existing jobs table if they don't exist
+  db.run(`ALTER TABLE jobs ADD COLUMN workers_required INTEGER DEFAULT 1`, (err) => {
+    // Ignore error if column already exists
+  });
+  db.run(`ALTER TABLE jobs ADD COLUMN workers_joined INTEGER DEFAULT 0`, (err) => {
+    // Ignore error if column already exists
+  });
+  db.run(`ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL`, (err) => {
+    // Ignore error if column already exists
+  });
 
   console.log('Database tables initialized');
 }

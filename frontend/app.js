@@ -59,6 +59,21 @@ const telegramUser = tg.initDataUnsafe?.user || {
   username: 'user'
 };
 
+// Check for referral parameter in URL
+const urlParams = new URLSearchParams(window.location.search);
+const referralParam = urlParams.get('ref');
+if (referralParam && referralParam !== 'undefined') {
+  // Store referral for later use when user registers
+  sessionStorage.setItem('pending_referral', referralParam);
+}
+
+// Get pending referral from session storage
+function getPendingReferral() {
+  const ref = sessionStorage.getItem('pending_referral');
+  sessionStorage.removeItem('pending_referral');
+  return ref;
+}
+
 // ==================== API Functions ====================
 async function apiCall(endpoint, method = 'GET', body = null) {
   const options = {
@@ -102,6 +117,9 @@ async function initAuth() {
 }
 
 async function registerUser(data) {
+  // Get referral parameter if available
+  const referredBy = getPendingReferral();
+  
   const userData = {
     telegram_id: telegramUser.id,
     name: data.name,
@@ -109,7 +127,8 @@ async function registerUser(data) {
     role: data.role,
     city: data.city,
     district: data.district,
-    skills: data.skills || null
+    skills: data.skills || null,
+    referred_by: referredBy || null
   };
   
   await apiCall('/user', 'POST', userData);
@@ -254,6 +273,13 @@ function createJobCard(job) {
     month: 'short'
   });
   
+  const workersRequired = job.workers_required || 1;
+  const workersJoined = job.workers_joined || 0;
+  const isMultiWorker = workersRequired > 1;
+  const workersText = isMultiWorker 
+    ? `${workersJoined} из ${workersRequired} работников` 
+    : '';
+  
   return `
     <div class="job-card" onclick="showJobDetail(${job.id})">
       <div class="job-card-header">
@@ -271,10 +297,32 @@ function createJobCard(job) {
         </span>
         <span class="job-card-tag">${job.district}</span>
         <span class="job-card-tag">${formatDate(job.date)}</span>
+        ${isMultiWorker ? `<span class="job-card-tag workers-tag">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          ${workersText}
+        </span>` : ''}
       </div>
       <div class="job-card-footer">
         <span class="job-card-employer">${escapeHtml(job.employer_name || 'Заказчик')}</span>
-        <span class="job-card-date">${date}</span>
+        <div class="job-card-actions">
+          ${currentUser?.role === 'worker' && job.status === 'open' ? `
+            <button class="btn-small btn-primary" onclick="event.stopPropagation(); takeJob(${job.id})">Взять</button>
+          ` : ''}
+          <button class="btn-small btn-secondary" onclick="event.stopPropagation(); shareJob(${job.id})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -293,6 +341,20 @@ async function showJobDetail(jobId) {
   try {
     const job = await apiCall(`/jobs/${jobId}`);
     const hasResponded = await checkIfResponded(jobId);
+    const workersRequired = job.workers_required || 1;
+    const workersJoined = job.workers_joined || 0;
+    const isMultiWorker = workersRequired > 1;
+    
+    // Get workers if multi-worker job
+    let workersList = '';
+    if (isMultiWorker) {
+      try {
+        const workers = await apiCall(`/jobs/${jobId}/workers`);
+        workersList = workers.map(w => `<div class="worker-item">👤 ${escapeHtml(w.worker_name || 'Работник')}</div>`).join('');
+      } catch (e) {
+        workersList = '';
+      }
+    }
     
     detail.innerHTML = `
       <div class="job-detail-header">
@@ -300,6 +362,19 @@ async function showJobDetail(jobId) {
         <div class="job-detail-payment">${formatPayment(job.payment)}</div>
         <span class="job-status ${job.status}">${getStatusText(job.status)}</span>
       </div>
+      
+      ${isMultiWorker ? `
+        <div class="job-detail-section workers-section">
+          <h4>Работники</h4>
+          <div class="workers-progress">
+            <div class="workers-count">${workersJoined} из ${workersRequired} присоединилось</div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${(workersJoined / workersRequired) * 100}%"></div>
+            </div>
+          </div>
+          ${workersList ? `<div class="workers-list">${workersList}</div>` : ''}
+        </div>
+      ` : ''}
       
       <div class="job-detail-section">
         <h4>Описание</h4>
@@ -322,6 +397,13 @@ async function showJobDetail(jobId) {
       ${currentUser?.role === 'worker' && job.status === 'open' && !hasResponded ? `
         <div class="job-detail-actions">
           <button class="btn-primary" onclick="respondToJob(${job.id})">Откликнуться</button>
+          ${isMultiWorker ? `<button class="btn-secondary" onclick="takeJob(${job.id})">Взять заказ</button>` : ''}
+        </div>
+      ` : ''}
+      
+      ${currentUser?.role === 'worker' && job.status === 'open' && hasResponded && isMultiWorker ? `
+        <div class="job-detail-actions">
+          <button class="btn-secondary" onclick="takeJob(${job.id})">Присоединиться</button>
         </div>
       ` : ''}
       
@@ -331,17 +413,24 @@ async function showJobDetail(jobId) {
         </div>
       ` : ''}
       
-      ${job.status === 'in_progress' && job.worker_id === telegramUser.id ? `
+      ${job.status === 'in_progress' && job.employer_id === telegramUser.id ? `
         <div class="job-detail-actions">
           <button class="btn-primary btn-success" onclick="completeJob(${job.id})">Завершить</button>
         </div>
       ` : ''}
       
-      ${job.status === 'in_progress' && (job.worker_id === telegramUser.id || job.employer_id === telegramUser.id) ? `
-        <div class="job-detail-actions">
-          <button class="btn-secondary" onclick="showRateModal(${job.id}, ${job.employer_id === telegramUser.id ? job.worker_id : job.employer_id})">Оценить</button>
-        </div>
+      ${job.status === 'completed' ? `
+        ${isMultiWorker && workersList ? `<div class="job-detail-actions"><button class="btn-secondary" onclick="showRateModalMulti(${job.id}, ${job.employer_id})">Оценить всех</button></div>` : ''}
+        ${!isMultiWorker && (job.worker_id === telegramUser.id || job.employer_id === telegramUser.id) ? `
+          <div class="job-detail-actions">
+            <button class="btn-secondary" onclick="showRateModal(${job.id}, ${job.employer_id === telegramUser.id ? job.worker_id : job.employer_id})">Оценить</button>
+          </div>
+        ` : ''}
       ` : ''}
+      
+      <div class="job-detail-actions">
+        <button class="btn-secondary" onclick="shareJob(${job.id})">Поделиться</button>
+      </div>
     `;
   } catch (e) {
     detail.innerHTML = '<p>Ошибка загрузки</p>';
@@ -364,6 +453,66 @@ async function respondToJob(jobId) {
     showJobDetail(jobId);
   } catch (e) {
     // Already responded or error
+  }
+}
+
+async function takeJob(jobId) {
+  if (!currentUser || currentUser.role !== 'worker') {
+    showToast('Только работники могут брать заказы', 'error');
+    return;
+  }
+  
+  try {
+    const result = await apiCall(`/jobs/${jobId}/take`, 'POST', { worker_id: telegramUser.id });
+    if (result.success) {
+      showToast(result.message || 'Вы присоединились к заказу!', 'success');
+      loadJobs(); // Refresh job list
+    }
+  } catch (e) {
+    showToast(e.message || 'Не удалось взять заказ', 'error');
+  }
+}
+
+async function leaveJob(jobId) {
+  try {
+    const result = await apiCall(`/jobs/${jobId}/leave`, 'POST', { worker_id: telegramUser.id });
+    if (result.success) {
+      showToast('Вы покинули заказ', 'success');
+      loadJobs(); // Refresh job list
+    }
+  } catch (e) {
+    showToast(e.message || 'Не удалось покинуть заказ', 'error');
+  }
+}
+
+function shareJob(jobId) {
+  const jobLink = `${window.location.origin}/#/job/${jobId}?ref=${telegramUser?.id || ''}`;
+  const shareText = `Новый заказ доступен в Trudyagin!`;
+  
+  if (tg && tg.shareUrl) {
+    // Use Telegram share
+    tg.shareUrl(jobLink, shareText);
+  } else {
+    // Fallback: use Web Share API or copy to clipboard
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(jobLink)}&text=${encodeURIComponent(shareText)}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: 'Trudyagin - Заказ',
+        text: shareText,
+        url: shareUrl
+      }).catch(() => {
+        // User cancelled or error
+      });
+    } else {
+      // Copy to clipboard fallback
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast('Ссылка скопирована!', 'success');
+      }).catch(() => {
+        // Open in new tab as fallback
+        window.open(shareUrl, '_blank');
+      });
+    }
   }
 }
 
@@ -612,6 +761,109 @@ function showRateModal(jobId, toUserId) {
   });
 }
 
+async function showRateModalMulti(jobId, employerId) {
+  try {
+    const workers = await apiCall(`/jobs/${jobId}/workers`);
+    if (!workers || workers.length === 0) {
+      showToast('Нет работников для оценки', 'error');
+      return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    
+    let workersHtml = workers.map(w => `
+      <div class="rate-worker-item" data-worker-id="${w.worker_id}">
+        <div class="rate-worker-name">👤 ${escapeHtml(w.worker_name || 'Работник')}</div>
+        <div class="star-rating small" data-worker="${w.worker_id}">
+          ${[1,2,3,4,5].map(i => `
+            <button type="button" data-rating="${i}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+    
+    modal.innerHTML = `
+      <div class="modal">
+        <h3 class="modal-title">Оценить работников</h3>
+        <div class="rate-workers-list">
+          ${workersHtml}
+        </div>
+        <div class="form-group">
+          <textarea id="ratingCommentMulti" rows="3" placeholder="Комментарий (необязательно)"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Отмена</button>
+          <button class="btn-primary" onclick="submitRatingMulti(${jobId}, ${employerId})">Отправить</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Add star rating interactivity for each worker
+    workers.forEach(w => {
+      const ratingDiv = modal.querySelector(`.star-rating[data-worker="${w.worker_id}"]`);
+      if (ratingDiv) {
+        const stars = ratingDiv.querySelectorAll('button');
+        stars.forEach(star => {
+          star.addEventListener('click', () => {
+            const rating = parseInt(star.dataset.rating);
+            ratingDiv.dataset.selected = rating;
+            stars.forEach((s, i) => {
+              s.classList.toggle('active', i < rating);
+            });
+          });
+        });
+      }
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.remove();
+    });
+  } catch (e) {
+    showToast('Ошибка загрузки работников', 'error');
+  }
+}
+
+async function submitRatingMulti(jobId, employerId) {
+  const workerItems = document.querySelectorAll('.rate-worker-item');
+  const comment = document.getElementById('ratingCommentMulti')?.value || '';
+  let submitted = 0;
+  
+  for (const item of workerItems) {
+    const workerId = parseInt(item.dataset.workerId);
+    const ratingDiv = item.querySelector('.star-rating');
+    const rating = parseInt(ratingDiv?.dataset.selected) || 0;
+    
+    if (rating > 0) {
+      try {
+        await apiCall('/rate', 'POST', {
+          from_user: employerId,
+          to_user: workerId,
+          job_id: jobId,
+          rating: rating,
+          comment: comment
+        });
+        submitted++;
+      } catch (e) {
+        // Continue with other workers
+      }
+    }
+  }
+  
+  if (submitted > 0) {
+    showToast(`Оценено ${submitted} работников!`, 'success');
+    document.querySelector('.modal-overlay')?.remove();
+    showJobDetail(jobId);
+  } else {
+    showToast('Выберите оценку', 'error');
+  }
+}
+
 async function submitRating(jobId, toUserId) {
   const rating = document.querySelector('.star-rating .active')?.closest('button')?.dataset.rating;
   if (!rating) {
@@ -797,7 +1049,8 @@ function setupForms() {
       payment: parseFloat(form.jobPayment.value),
       city: form.jobCity.value,
       district: form.jobDistrict.value,
-      date: form.jobDate.value
+      date: form.jobDate.value,
+      workers_required: parseInt(form.jobWorkersRequired.value) || 1
     });
   });
   

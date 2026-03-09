@@ -187,6 +187,12 @@
           </div>
 
           <div class="form-group">
+            <label for="jobWorkersRequired">Требуется работников</label>
+            <input type="number" id="jobWorkersRequired" required min="1" max="50" value="1" placeholder="1">
+            <small style="color: var(--text-secondary);">Оставьте 1 для одного работника</small>
+          </div>
+
+          <div class="form-group">
             <label for="jobCity">Город</label>
             <select id="jobCity" required>
               <option value="">Выберите город</option>
