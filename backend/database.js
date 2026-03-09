@@ -1,7 +1,8 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(__dirname, '..', 'database', 'trudyagin.db');
+// Use /tmp for Vercel (ephemeral filesystem) or local path for development
+const dbPath = process.env.VERCEL ? '/tmp/trudyagin.db' : path.join(__dirname, '..', 'database', 'trudyagin.db');
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {

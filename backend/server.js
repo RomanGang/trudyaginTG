@@ -8,7 +8,16 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+
+// Serve static files only when NOT on Vercel
+if (!process.env.VERCEL) {
+  app.use(express.static(path.join(__dirname, '..', 'frontend')));
+}
+
+// API routes
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Initialize database
 db.get('SELECT 1', [], (err) => {
@@ -616,3 +625,6 @@ app.get('/api/notifications/:user_id', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Trudyagin server running on port ${PORT}`);
 });
+
+// For Vercel serverless
+module.exports = app;
