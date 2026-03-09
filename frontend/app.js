@@ -1255,18 +1255,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // User already registered, skip entrance
     document.getElementById('entranceOverlay').style.display = 'none';
     document.getElementById('registrationScreen').style.display = 'none';
-  }
-  
-  // Run entrance animation
-  setTimeout(() => {
-    const overlay = document.getElementById('entranceOverlay');
-    overlay.style.transition = 'opacity 0.3s';
-    overlay.style.opacity = '0';
+  } else {
+    // Run entrance animation - hide after 1.5 seconds and show registration
     setTimeout(() => {
-      overlay.style.display = 'none';
-      setupRegistration();
-    }, 300);
-  }, 1500);
+      const overlay = document.getElementById('entranceOverlay');
+      if (overlay) overlay.style.display = 'none';
+      
+      const regScreen = document.getElementById('registrationScreen');
+      if (regScreen) {
+        regScreen.style.display = 'block';
+        setupRegistration();
+      }
+    }, 1500);
+  }
   
   setupNavigation();
   setupForms();
@@ -1277,63 +1278,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==================== Registration ====================
 function setupRegistration() {
-  const regScreen = document.getElementById('registrationScreen');
-  regScreen.style.display = 'block';
+  console.log('Setting up registration');
   
-  let selectedRole = null;
+  const regScreen = document.getElementById('registrationScreen');
+  const roleBox = document.getElementById('roleBox');
+  const regForm = document.getElementById('regForm');
   const roleBtns = document.querySelectorAll('.role-btn');
   
+  if (!regScreen || !roleBtns.length) {
+    console.error('Registration elements not found');
+    return;
+  }
+  
+  let selectedRole = null;
+  
   roleBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.onclick = function() {
       roleBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedRole = btn.dataset.role;
+      this.classList.add('active');
+      selectedRole = this.dataset.role;
       
-      document.getElementById('roleBox').style.display = 'none';
-      document.getElementById('regForm').classList.add('show');
-    });
+      roleBox.style.display = 'none';
+      regForm.classList.add('show');
+    };
   });
+  
+  // Pre-fill name from Telegram
+  const nameInput = document.getElementById('regName');
+  if (nameInput && telegramUser && telegramUser.first_name) {
+    nameInput.value = telegramUser.first_name;
+  }
   
   // City change handler
   const regCity = document.getElementById('regCity');
   const regDistrict = document.getElementById('regDistrict');
-  regCity.addEventListener('change', () => updateDistrictOptions(regCity, regDistrict));
+  if (regCity) {
+    regCity.onchange = function() {
+      updateDistrictOptions(regCity, regDistrict);
+    };
+  }
   
   // Form submit
-  document.getElementById('regForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('Form submitted', { selectedRole });
-    
-    if (!selectedRole) {
-      showToast('Выберите роль', 'error');
-      return;
-    }
-    
-    const name = document.getElementById('regName').value.trim();
-    const city = document.getElementById('regCity').value;
-    const district = document.getElementById('regDistrict').value;
-    
-    console.log('Registering:', { name, role: selectedRole, city, district });
-    
-    if (!name) {
-      showToast('Введите имя', 'error');
-      return;
-    }
-    
-    try {
-      await registerUser({
-        name: name,
-        role: selectedRole,
-        city: city,
-        district: district
-      });
+  if (regForm) {
+    regForm.onsubmit = async function(e) {
+      e.preventDefault();
       
-      regScreen.style.display = 'none';
-    } catch (err) {
-      console.error('Registration error:', err);
-      showToast('Ошибка регистрации', 'error');
-    }
-  });
+      if (!selectedRole) {
+        showToast('Выберите роль', 'error');
+        return;
+      }
+      
+      const name = document.getElementById('regName').value.trim();
+      const city = document.getElementById('regCity').value;
+      const district = document.getElementById('regDistrict').value;
+      
+      if (!name) {
+        showToast('Введите имя', 'error');
+        return;
+      }
+      
+      try {
+        await registerUser({
+          name: name,
+          role: selectedRole,
+          city: city,
+          district: district
+        });
+        
+        regScreen.style.display = 'none';
+      } catch (err) {
+        console.error('Registration error:', err);
+        showToast('Ошибка регистрации', 'error');
+      }
+    };
+  }
 }
