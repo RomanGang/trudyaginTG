@@ -3,626 +3,1739 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#2481cc">
-  <title>Trudyagin — Быстрые заработки</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Трудягин — работа и исполнители рядом</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* ==================== VARIABLES ==================== */
+    :root {
+      --primary: #2563EB;
+      --primary-light: #3B82F6;
+      --primary-dark: #1D4ED8;
+      --accent: #10B981;
+      --success: #22C55E;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --text: #0F172A;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+      --border: #E2E8F0;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-lg: 24px;
+    }
+
+    /* ==================== RESET ==================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==================== APP CONTAINER ==================== */
+    #app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    /* ==================== ANIMATIONS ==================== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    /* ==================== PAGES ==================== */
+    .page {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .page.active {
+      display: flex;
+    }
+
+    /* ==================== HEADER ==================== */
+    .header {
+      padding: 16px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.95);
+      background: var(--border);
+    }
+
+    /* ==================== SCROLLABLE CONTENT ==================== */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 100px;
+    }
+
+    /* ==================== BOTTOM NAV ==================== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 16px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      z-index: 1000;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
+    }
+
+    .nav-item svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    .nav-item:active {
+      transform: scale(0.95);
+    }
+
+    /* ==================== BUTTONS ==================== */
+    .btn {
+      padding: 14px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-primary:active {
+      background: var(--primary-dark);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success) 0%, #16A34A 100%);
+      color: white;
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    /* ==================== CARDS ==================== */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+    }
+
+    .card:active {
+      transform: scale(0.99);
+    }
+
+    /* ==================== QUICK FILTERS ==================== */
+    .quick-filters {
+      display: flex;
+      gap: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .quick-filters::-webkit-scrollbar {
+      display: none;
+    }
+
+    .quick-filter {
+      flex-shrink: 0;
+      padding: 10px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .quick-filter:active {
+      transform: scale(0.95);
+    }
+
+    .quick-filter.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* ==================== JOB CARDS ==================== */
+    .jobs-container {
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .job-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .job-card:active {
+      transform: scale(0.99);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .job-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .job-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .job-payment {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--success);
+      white-space: nowrap;
+    }
+
+    .job-desc {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .job-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .job-tag {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg);
+      color: var(--text-secondary);
+    }
+
+    .job-tag.category {
+      background: #DBEAFE;
+      color: var(--primary);
+    }
+
+    .job-tag.location {
+      background: #F1F5F9;
+      color: var(--text-secondary);
+    }
+
+    .job-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .job-employer {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .job-date {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .job-respond-btn {
+      padding: 10px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .job-respond-btn:active {
+      transform: scale(0.95);
+      background: var(--primary-dark);
+    }
+
+    /* ==================== EMPTY STATE ==================== */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .empty-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ==================== INPUTS ==================== */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      color: var(--text);
+      background: var(--surface);
+      transition: all 0.2s;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .input::placeholder {
+      color: var(--text-muted);
+    }
+
+    select.input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    textarea.input {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    /* ==================== HERO SECTION ==================== */
+    .hero {
+      padding: 24px 20px;
+      background: linear-gradient(135deg, var(--primary) 0%, #1D4ED8 100%);
+      color: white;
+    }
+
+    .hero-title {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+      margin-bottom: 20px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .hero-btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .hero-btn.primary {
+      background: white;
+      color: var(--primary);
+      border: none;
+    }
+
+    .hero-btn.secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .hero-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* ==================== STATS ==================== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ==================== ROLE SELECTION ==================== */
+    .role-selection {
+      padding: 40px 20px;
+    }
+
+    .role-title {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .role-subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .role-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .role-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+    }
+
+    .role-card:active {
+      transform: scale(0.99);
+    }
+
+    .role-card.selected {
+      border-color: var(--primary);
+      background: #EFF6FF;
+    }
+
+    .role-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .role-card.worker .role-icon {
+      background: #DBEAFE;
+    }
+
+    .role-card.employer .role-icon {
+      background: #D1FAE5;
+    }
+
+    .role-info h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .role-info p {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ==================== REGISTRATION FORM ==================== */
+    .registration-form {
+      padding: 24px 20px;
+    }
+
+    .form-section {
+      margin-bottom: 24px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .form-row .input-group {
+      flex: 1;
+    }
+
+    /* ==================== TOAST NOTIFICATIONS ==================== */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .toast.success {
+      background: var(--success);
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
+    .toast.warning {
+      background: var(--warning);
+    }
+
+    /* ==================== LOADING ==================== */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* ==================== MODAL ==================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      width: 100%;
+      max-width: 500px;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 24px;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .modal-actions .btn {
+      flex: 1;
+    }
+
+    /* ==================== ABOUT PAGE ==================== */
+    .about-hero {
+      background: linear-gradient(135deg, var(--primary) 0%, #1D4ED8 100%);
+      padding: 40px 20px;
+      color: white;
+      text-align: center;
+    }
+
+    .about-logo {
+      width: 72px;
+      height: 72px;
+      background: white;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .about-title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .about-subtitle {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .about-section {
+      padding: 24px 20px;
+    }
+
+    .about-section h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .about-section p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .feature-icon.blue { background: #DBEAFE; }
+    .feature-icon.green { background: #D1FAE5; }
+    .feature-icon.yellow { background: #FEF3C7; }
+    .feature-icon.purple { background: #EDE9FE; }
+
+    .feature-text {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    /* ==================== CREATE JOB ==================== */
+    .create-job-form {
+      padding: 20px;
+    }
+
+    .create-job-form .input-group {
+      margin-bottom: 20px;
+    }
+
+    /* ==================== PROFILE ==================== */
+    .profile-header {
+      background: linear-gradient(135deg, var(--primary) 0%, #1D4ED8 100%);
+      padding: 32px 20px;
+      color: white;
+    }
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .profile-name {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .profile-role {
+      font-size: 14px;
+      text-align: center;
+      opacity: 0.9;
+    }
+
+    .profile-stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 20px;
+    }
+
+    .profile-stat {
+      text-align: center;
+    }
+
+    .profile-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .profile-stat-label {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    /* ==================== UTILITY ==================== */
+    .text-center { text-align: center; }
+    .mt-4 { margin-top: 16px; }
+    .mb-4 { margin-bottom: 16px; }
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
-  <!-- Registration - Simple -->
-  <div class="registration-screen" id="registrationScreen">
-    <div class="reg-logo">
-      <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="60" height="60" rx="14" fill="#007AFF"/>
-        <path d="M30 10L15 20V40L30 50L45 40V20L30 10Z" fill="white"/>
-        <path d="M30 20L20 26V38L30 44L40 38V26L30 20Z" fill="#007AFF"/>
-        <circle cx="30" cy="32" r="5" fill="white"/>
-      </svg>
-    </div>
-    <h1 class="reg-title">Добро пожаловать!</h1>
-    <p class="reg-subtitle">Выберите вашу роль</p>
-    
-    <div class="role-box" id="roleBox">
-      <button class="role-btn" id="btnWorker" type="button">
-        <div class="role-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-        </div>
-        <div class="role-info">
-          <h3>Исполнитель</h3>
-          <p>Хочу выполнять заказы</p>
-        </div>
-      </button>
-      <button class="role-btn" id="btnEmployer" type="button">
-        <div class="role-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-          </svg>
-        </div>
-        <div class="role-info">
-          <h3>Заказчик</h3>
-          <p>Хочу создавать заказы</p>
-        </div>
-      </button>
-    </div>
-
-    <form class="reg-form" id="regForm" style="display:none;">
-      <div class="form-group">
-        <label>Ваше имя</label>
-        <input type="text" id="regName" placeholder="Иван Иванов">
-      </div>
-      <div class="form-group">
-        <label>Город</label>
-        <select id="regCity">
-          <option value="">Выберите город</option>
-          <option value="Москва">Москва</option>
-          <option value="Санкт-Петербург">Санкт-Петербург</option>
-          <option value="Казань">Казань</option>
-          <option value="Екатеринбург">Екатеринбург</option>
-          <option value="Верхняя Пышма">Верхняя Пышма</option>
-          <option value="Ростов-на-Дону">Ростов-на-Дону</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Район</label>
-        <select id="regDistrict">
-          <option value="">Сначала выберите город</option>
-        </select>
-      </div>
-      <button type="button" class="btn-primary" id="submitRegBtn">Продолжить</button>
-      <button type="button" class="btn-secondary" id="testBtn">Тест API</button>
-    </form>
-  </div>
-
   <div id="app">
-    <!-- Navigation -->
-    <nav class="bottom-nav" id="bottomNav">
-      <button class="nav-btn active" data-page="home">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-        <span>Главная</span>
-      </button>
-      <button class="nav-btn" data-page="jobs">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-        </svg>
-        <span>Заказы</span>
-      </button>
-      <button class="nav-btn" data-page="my-jobs">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-        </svg>
-        <span>Мои</span>
-      </button>
-      <button class="nav-btn" data-page="profile">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-        <span>Профиль</span>
-      </button>
-    </nav>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Pages Container -->
-    <main class="pages-container">
-      <!-- Home Page -->
-      <section class="page active" id="page-home">
-        <header class="page-header">
-          <div class="logo">
-            <div class="logo-icon">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <circle cx="16" cy="16" r="15" fill="url(#logoGrad)"/>
-                <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <defs>
-                  <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                    <stop offset="0%" stop-color="#2481cc"/>
-                    <stop offset="100%" stop-color="#0d5a9e"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-            <h1>Trudyagin</h1>
-          </div>
-          <button class="notification-btn" id="notificationBtn">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            <span class="notification-badge" id="notificationBadge">0</span>
-          </button>
-        </header>
+    <!-- Registration Page -->
+    <div class="page" id="page-register">
+      <div class="role-selection fade-in">
+        <h1 class="role-title">Добро пожаловать!</h1>
+        <p class="role-subtitle">Выберите, кто вы</p>
         
-        <div class="welcome-card">
-          <h2>Добро пожаловать!</h2>
-          <p>Находите быстрые заработки или находите исполнителей для своих задач</p>
-          <div class="user-info" id="userInfo" style="display: none;">
-            <span class="user-name" id="displayName"></span>
-            <span class="user-role" id="displayRole"></span>
-          </div>
-        </div>
-
-        <div class="quick-actions">
-          <button class="action-btn primary" id="btnFindJobs">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="M21 21l-4.35-4.35"></path>
-            </svg>
-            Найти заказы
-          </button>
-          <button class="action-btn secondary" id="btnCreateJob">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Создать заказ
-          </button>
-        </div>
-
-        <!-- Stats for logged in users -->
-        <div class="stats-section" id="statsSection" style="display: none;">
-          <h3>Ваша статистика</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <span class="stat-value" id="statJobsCount">0</span>
-              <span class="stat-label">Заказов</span>
+        <div class="role-cards">
+          <div class="role-card worker" onclick="selectRole('worker')">
+            <div class="role-icon">👷</div>
+            <div class="role-info">
+              <h3>Исполнитель</h3>
+              <p>Хочу найти работу</p>
             </div>
-            <div class="stat-card">
-              <span class="stat-value" id="statRating">0.0</span>
-              <span class="stat-label">Рейтинг</span>
+          </div>
+          
+          <div class="role-card employer" onclick="selectRole('employer')">
+            <div class="role-icon">🏢</div>
+            <div class="role-info">
+              <h3>Работодатель</h3>
+              <p>Хочу найти работников</p>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- Jobs Feed Page -->
-      <section class="page" id="page-jobs">
-        <header class="page-header">
-          <button class="back-btn" id="backBtn" style="display: none;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h2>Заказы</h2>
-        </header>
-
-        <!-- Quick Filters (like Vercel site) -->
-        <div class="quick-filters">
-          <button class="quick-filter active" data-filter="all">Все</button>
-          <button class="quick-filter" data-filter="today">Сегодня</button>
-          <button class="quick-filter" data-filter="tomorrow">Завтра</button>
-          <button class="quick-filter" data-filter="weekend">Выходные</button>
-          <button class="quick-filter" data-filter="hour">Почасовая</button>
-          <button class="quick-filter" data-filter="shift">За смену</button>
-        </div>
-
-        <div class="filters">
-          <div class="filter-row">
-            <select id="cityFilter" class="filter-select">
-              <option value="">Все города</option>
-              <option value="Москва">Москва</option>
-              <option value="Санкт-Петербург">Санкт-Петербург</option>
-              <option value="Казань">Казань</option>
-              <option value="Екатеринбург">Екатеринбург</option>
-              <option value="Верхняя Пышма">Верхняя Пышма</option>
-              <option value="Ростов-на-Дону">Ростов-на-Дону</option>
-            </select>
-            <select id="districtFilter" class="filter-select" disabled>
-              <option value="">Район</option>
-            </select>
+      <form class="registration-form hidden" id="regForm" onsubmit="submitRegistration(event)">
+        <div class="form-section">
+          <div class="input-group">
+            <label class="input-label">Ваше имя</label>
+            <input type="text" class="input" id="regName" placeholder="Иван Иванов" required>
           </div>
-          <div class="filter-row">
-            <select id="categoryFilter" class="filter-select">
-              <option value="">Все категории</option>
-              <option value="Разнорабочие">Разнорабочие</option>
-              <option value="Грузчики">Грузчики</option>
-              <option value="Сварщики">Сварщики</option>
-              <option value="Маляры">Маляры</option>
-              <option value="Клининг">Клининг</option>
-              <option value="Сборщики">Сборщики</option>
-              <option value="Электрики">Электрики</option>
-              <option value="Сантехники">Сантехники</option>
-              <option value="Плиточники">Плиточники</option>
-              <option value="Штукатуры">Штукатуры</option>
-              <option value="Столяры">Столяры</option>
-              <option value="Кровельщики">Кровельщики</option>
-              <option value="Фасадчики">Фасадчики</option>
-              <option value="Механизаторы">Механизаторы</option>
-              <option value="Охранники">Охранники</option>
-              <option value="Курьеры">Курьеры</option>
-              <option value="Водители">Водители</option>
-              <option value="Комплектовщики">Комплектовщики</option>
-              <option value="Подсобные рабочие">Подсобные рабочие</option>
-              <option value="Другое">Другое</option>
-            </select>
-          </div>
-          <div class="filter-row">
-            <select id="scheduleFilter" class="filter-select">
-              <option value="">Любой график</option>
-              <option value="Ежедневная">Ежедневная</option>
-              <option value="Еженедельная">Еженедельная</option>
-              <option value="Разовая">Разовая</option>
-            </select>
-            <select id="paymentTypeFilter" class="filter-select">
-              <option value="">Любая оплата</option>
-              <option value="Почасовая">Почасовая</option>
-              <option value="За смену">За смену</option>
-              <option value="Договорная">Договорная</option>
-            </select>
-          </div>
-          <div class="filter-row">
-            <input type="number" id="paymentFilter" class="filter-input" placeholder="Мин. оплата ₽">
-            <button class="filter-btn" id="applyFilters">Применить</button>
-          </div>
-        </div>
-
-        <div class="jobs-list" id="jobsList">
-          <div class="loading">
-            <div class="spinner"></div>
-            <p>Загрузка заказов...</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Create Job Page -->
-      <section class="page" id="page-create-job">
-        <header class="page-header">
-          <button class="back-btn" data-back="jobs">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h2>Создать заказ</h2>
-        </header>
-
-        <form class="form" id="createJobForm">
-          <div class="form-group">
-            <label for="jobTitle">Название</label>
-            <input type="text" id="jobTitle" required placeholder="Например: Перевезти мебель">
-          </div>
-
-          <div class="form-group">
-            <label for="jobDescription">Описание</label>
-            <textarea id="jobDescription" required rows="4" placeholder="Подробно опишите задачу..."></textarea>
-          </div>
-
+          
           <div class="form-row">
-            <div class="form-group">
-              <label for="jobPayment">Оплата (₽)</label>
-              <input type="number" id="jobPayment" required min="1" placeholder="1000">
-            </div>
-            <div class="form-group">
-              <label for="jobDate">Дата</label>
-              <input type="date" id="jobDate" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="jobWorkersRequired">Требуется работников</label>
-            <input type="number" id="jobWorkersRequired" required min="1" max="50" value="1" placeholder="1">
-            <small style="color: var(--text-secondary);">Оставьте 1 для одного работника</small>
-          </div>
-
-          <div class="form-group">
-            <label for="jobCity">Город</label>
-            <select id="jobCity" required>
-              <option value="">Выберите город</option>
-              <option value="Москва">Москва</option>
-              <option value="Санкт-Петербург">Санкт-Петербург</option>
-              <option value="Казань">Казань</option>
-              <option value="Екатеринбург">Екатеринбург</option>
-              <option value="Верхняя Пышма">Верхняя Пышма</option>
-              <option value="Ростов-на-Дону">Ростов-на-Дону</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="jobDistrict">Район</label>
-            <select id="jobDistrict">
-              <option value="">Сначала выберите город</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="jobCategory">Категория</label>
-            <select id="jobCategory">
-              <option value="">Выберите категорию</option>
-              <option value="Разнорабочие">Разнорабочие</option>
-              <option value="Грузчики">Грузчики</option>
-              <option value="Сварщики">Сварщики</option>
-              <option value="Маляры">Маляры</option>
-              <option value="Клининг">Клининг</option>
-              <option value="Сборщики">Сборщики</option>
-              <option value="Электрики">Электрики</option>
-              <option value="Сантехники">Сантехники</option>
-              <option value="Плиточники">Плиточники</option>
-              <option value="Штукатуры">Штукатуры</option>
-              <option value="Столяры">Столяры</option>
-              <option value="Кровельщики">Кровельщики</option>
-              <option value="Фасадчики">Фасадчики</option>
-              <option value="Механизаторы">Механизаторы</option>
-              <option value="Охранники">Охранники</option>
-              <option value="Курьеры">Курьеры</option>
-              <option value="Водители">Водители</option>
-              <option value="Комплектовщики">Комплектовщики</option>
-              <option value="Подсобные рабочие">Подсобные рабочие</option>
-              <option value="Другое">Другое</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="jobSchedule">График</label>
-            <select id="jobSchedule">
-              <option value="">Выберите график</option>
-              <option value="Ежедневная">Ежедневная</option>
-              <option value="Еженедельная">Еженедельная</option>
-              <option value="Разовая">Разовая</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="jobPaymentType">Тип оплаты</label>
-            <select id="jobPaymentType">
-              <option value="Договорная">Договорная</option>
-              <option value="Почасовая">Почасовая</option>
-              <option value="За смену">За смену</option>
-            </select>
-          </div>
-
-          <button type="submit" class="btn-primary">Опубликовать заказ</button>
-        </form>
-      </section>
-
-      <!-- My Jobs Page -->
-      <section class="page" id="page-my-jobs">
-        <header class="page-header">
-          <h2>Мои заказы</h2>
-        </header>
-
-        <div class="tabs">
-          <button class="tab active" data-tab="created">Созданные</button>
-          <button class="tab" data-tab="responded">Отклики</button>
-        </div>
-
-        <div class="my-jobs-content" id="myJobsContent">
-          <div class="loading">
-            <div class="spinner"></div>
-            <p>Загрузка...</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Job Detail Page -->
-      <section class="page" id="page-job-detail">
-        <header class="page-header">
-          <button class="back-btn" data-back="jobs">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h2>Заказ</h2>
-        </header>
-
-        <div class="job-detail" id="jobDetail">
-          <div class="loading">
-            <div class="spinner"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Applicants Page -->
-      <section class="page" id="page-applicants">
-        <header class="page-header">
-          <button class="back-btn" data-back="my-jobs">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h2>Отклики</h2>
-        </header>
-
-        <div class="applicants-list" id="applicantsList">
-          <div class="loading">
-            <div class="spinner"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Profile Page -->
-      <section class="page" id="page-profile">
-        <header class="page-header">
-          <h2>Профиль</h2>
-        </header>
-
-        <div class="profile-card">
-          <div class="avatar">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <h3 id="profileName">—</h3>
-          <p class="role-badge" id="profileRole">—</p>
-          <div class="rating" id="profileRating">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-            <span>0.0</span>
-          </div>
-        </div>
-
-        <form class="form" id="profileForm">
-          <div class="form-group">
-            <label for="profileNameInput">Имя</label>
-            <input type="text" id="profileNameInput" placeholder="Ваше имя">
-          </div>
-
-          <div class="form-group">
-            <label for="profilePhone">Телефон</label>
-            <input type="tel" id="profilePhone" placeholder="+7 (999) 000-00-00">
-          </div>
-
-          <div class="form-group">
-            <label for="profileCity">Город</label>
-            <select id="profileCity">
-              <option value="">Выберите город</option>
-              <option value="Москва">Москва</option>
-              <option value="Санкт-Петербург">Санкт-Петербург</option>
-              <option value="Казань">Казань</option>
-              <option value="Екатеринбург">Екатеринбург</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="profileDistrict">Район</label>
-            <select id="profileDistrict" disabled>
-              <option value="">Сначала выберите город</option>
-            </select>
-          </div>
-
-          <div class="form-group" id="skillsGroup">
-            <label for="profileSkills">Навыки</label>
-            <textarea id="profileSkills" rows="3" placeholder="Перечислите ваши навыки..."></textarea>
-          </div>
-
-          <button type="submit" class="btn-primary">Сохранить профиль</button>
-        </form>
-
-        <div class="profile-actions">
-          <button class="btn-secondary" id="btnViewRatings">Мои отзывы</button>
-        </div>
-      </section>
-
-      <!-- Registration Page -->
-      <section class="page" id="page-register">
-        <div class="register-container">
-          <div class="logo-large">
-            <svg width="80" height="80" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="16" r="15" fill="url(#logoGrad2)"/>
-              <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <defs>
-                <linearGradient id="logoGrad2" x1="0" y1="0" x2="32" y2="32">
-                  <stop offset="0%" stop-color="#2481cc"/>
-                  <stop offset="100%" stop-color="#0d5a9e"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <h1>Trudyagin</h1>
-          <p class="tagline">Быстрые заработки для всех</p>
-
-          <form class="form" id="registerForm">
-            <div class="form-group">
-              <label for="regName">Ваше имя</label>
-              <input type="text" id="regName" required placeholder="Как к вам обращаться">
-            </div>
-
-            <div class="form-group">
-              <label>Выберите роль</label>
-              <div class="role-selector">
-                <label class="role-option">
-                  <input type="radio" name="role" value="worker" checked>
-                  <div class="role-card">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="8.5" cy="7" r="4"></circle>
-                      <path d="M20 8v6M23 11h-6"></path>
-                    </svg>
-                    <span>Исполнитель</span>
-                    <small>Хочу выполнять заказы</small>
-                  </div>
-                </label>
-                <label class="role-option">
-                  <input type="radio" name="role" value="employer">
-                  <div class="role-card">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="9" cy="7" r="4"></circle>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                    <span>Заказчик</span>
-                    <small>Хочу создавать заказы</small>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="regCity">Город</label>
-              <select id="regCity" required>
+            <div class="input-group">
+              <label class="input-label">Город</label>
+              <select class="input" id="regCity" required>
                 <option value="">Выберите город</option>
                 <option value="Москва">Москва</option>
                 <option value="Санкт-Петербург">Санкт-Петербург</option>
                 <option value="Казань">Казань</option>
                 <option value="Екатеринбург">Екатеринбург</option>
+                <option value="Новосибирск">Новосибирск</option>
+                <option value="Ростов-на-Дону">Ростов-на-Дону</option>
               </select>
             </div>
-
-            <div class="form-group">
-              <label for="regDistrict">Район</label>
-              <select id="regDistrict" disabled required>
-                <option value="">Сначала выберите город</option>
-              </select>
-            </div>
-
-            <button type="submit" class="btn-primary btn-large">Продолжить</button>
-          </form>
-        </div>
-      </section>
-
-      <!-- Notifications Page -->
-      <section class="page" id="page-notifications">
-        <header class="page-header">
-          <button class="back-btn" data-back="home">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h2>Уведомления</h2>
-        </header>
-
-        <div class="notifications-list" id="notificationsList">
-          <div class="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            <p>Нет новых уведомлений</p>
+          </div>
+          
+          <div class="input-group">
+            <label class="input-label">Район (необязательно)</label>
+            <select class="input" id="regDistrict">
+              <option value="">Любой район</option>
+            </select>
           </div>
         </div>
-      </section>
 
-      <!-- Ratings Page -->
-      <section class="page" id="page-ratings">
-        <header class="page-header">
-          <button class="back-btn" data-back="profile">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h2>Отзывы</h2>
-        </header>
+        <button type="submit" class="btn btn-primary btn-full">Продолжить</button>
+      </form>
+    </div>
 
-        <div class="ratings-list" id="ratingsList">
+    <!-- Home Page -->
+    <div class="page" id="page-home">
+      <header class="header">
+        <div class="header-content">
+          <div class="logo-section">
+            <div class="logo-icon">Т</div>
+            <span class="logo-text">Трудягин</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="hero">
+          <h1 class="hero-title">Находите работу рядом</h1>
+          <p class="hero-subtitle">Разовые и ежедневные задания от проверенных работодателей</p>
+          <div class="hero-actions">
+            <button class="hero-btn primary" onclick="navigateTo('jobs')">Найти работу</button>
+            <button class="hero-btn secondary" onclick="navigateTo('create-job')">Создать заказ</button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statJobs">0</div>
+            <div class="stat-label">Активных заказов</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statWorkers">0</div>
+            <div class="stat-label">Исполнителей</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statDone">0</div>
+            <div class="stat-label">Выполнено</div>
+          </div>
+        </div>
+
+        <div class="about-section">
+          <h2>Как это работает?</h2>
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon blue">🔍</div>
+              <div class="feature-text">Найдите подходящую работу по фильтрам</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon green">📝</div>
+              <div class="feature-text">Отправьте заявку работодателю</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon yellow">💰</div>
+              <div class="feature-text">Получите оплату за выполненную работу</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon purple">⭐</div>
+              <div class="feature-text">Оставьте отзыв и повысьте рейтинг</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" onclick="navigateTo('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          </svg>
+          <span>Главная</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Заказы</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('create-job')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Создать</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('my-jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>Мои</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Jobs Page -->
+    <div class="page" id="page-jobs">
+      <header class="header">
+        <div class="header-content">
+          <h2 style="font-size: 20px; font-weight: 700;">Заказы</h2>
+        </div>
+      </header>
+
+      <div class="quick-filters">
+        <button class="quick-filter active" data-filter="all">Все</button>
+        <button class="quick-filter" data-filter="today">Сегодня</button>
+        <button class="quick-filter" data-filter="tomorrow">Завтра</button>
+        <button class="quick-filter" data-filter="weekend">Выходные</button>
+        <button class="quick-filter" data-filter="hour">Почасовая</button>
+        <button class="quick-filter" data-filter="shift">За смену</button>
+      </div>
+
+      <div class="content">
+        <div class="jobs-container" id="jobsList">
           <div class="loading">
             <div class="spinner"></div>
+            <p class="loading-text">Загрузка заказов...</p>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
 
-    <!-- Toast Container -->
-    <div id="toastContainer"></div>
+      <nav class="bottom-nav">
+        <button class="nav-item" onclick="navigateTo('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          </svg>
+          <span>Главная</span>
+        </button>
+        <button class="nav-item active" onclick="navigateTo('jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Заказы</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('create-job')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Создать</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('my-jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>Мои</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Create Job Page -->
+    <div class="page" id="page-create-job">
+      <header class="header">
+        <div class="header-content">
+          <button class="icon-btn" onclick="navigateTo('home')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2 style="font-size: 18px; font-weight: 600;">Создать заказ</h2>
+          <div style="width: 40px;"></div>
+        </div>
+      </header>
+
+      <div class="content">
+        <form class="create-job-form" onsubmit="submitJob(event)">
+          <div class="input-group">
+            <label class="input-label">Название заказа</label>
+            <input type="text" class="input" id="jobTitle" placeholder="Например: Перевезти вещи" required>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Описание</label>
+            <textarea class="input" id="jobDesc" placeholder="Подробнее о задаче..." required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="input-group">
+              <label class="input-label">Оплата (₽)</label>
+              <input type="number" class="input" id="jobPayment" placeholder="1000" required>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Тип</label>
+              <select class="input" id="jobPaymentType">
+                <option value="fixed">За работу</option>
+                <option value="hour">Почасовая</option>
+                <option value="shift">За смену</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Категория</label>
+            <select class="input" id="jobCategory" required>
+              <option value="">Выберите категорию</option>
+              <option value="Грузчики">Грузчики</option>
+              <option value="Разнорабочие">Разнорабочие</option>
+              <option value="Клининг">Клининг</option>
+              <option value="Сборщики">Сборщики</option>
+              <option value="Водители">Водители</option>
+              <option value="Курьеры">Курьеры</option>
+              <option value="Другое">Другое</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="input-group">
+              <label class="input-label">Город</label>
+              <select class="input" id="jobCity" required>
+                <option value="">Город</option>
+                <option value="Москва">Москва</option>
+                <option value="Санкт-Петербург">Санкт-Петербург</option>
+                <option value="Казань">Казань</option>
+                <option value="Екатеринбург">Екатеринбург</option>
+                <option value="Новосибирск">Новосибирск</option>
+                <option value="Ростов-на-Дону">Ростов-на-Дону</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Когда</label>
+              <input type="date" class="input" id="jobDate" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full mt-4">Опубликовать</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- My Jobs Page -->
+    <div class="page" id="page-my-jobs">
+      <header class="header">
+        <div class="header-content">
+          <h2 style="font-size: 20px; font-weight: 700;">Мои заказы</h2>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="jobs-container" id="myJobsList">
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              </svg>
+            </div>
+            <h3 class="empty-title">Пока нет заказов</h3>
+            <p class="empty-desc">Создайте первый заказ или откликнитесь на существующие</p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <button class="nav-item" onclick="navigateTo('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          </svg>
+          <span>Главная</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Заказы</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('create-job')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Создать</span>
+        </button>
+        <button class="nav-item active" onclick="navigateTo('my-jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>Мои</span>
+        </button>
+      </nav>
+    </div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    // ==================== STATE ====================
+    let currentUser = null;
+    let selectedRole = null;
+    let jobs = [];
+    let currentFilter = 'all';
+
+    // Sample jobs data
+    const sampleJobs = [
+      { id: 1, title: 'Перевезти вещи на дачу', desc: 'Нужно перевезти коробки и мебель из квартиры на дачу', payment: 3000, type: 'fixed', category: 'Грузчики', city: 'Москва', date: '2026-03-10', employer: 'Александр' },
+      { id: 2, title: 'Помыть окна в офисе', desc: 'Требуется помыть 10 окон в офисном здании', payment: 2500, type: 'fixed', category: 'Клининг', city: 'Москва', date: '2026-03-11', employer: 'Мария' },
+      { id: 3, title: 'Собрать мебель ИКЕА', desc: 'Нужно собрать шкаф и кровать', payment: 2000, type: 'fixed', category: 'Сборщики', city: 'Санкт-Петербург', date: '2026-03-10', employer: 'Дмитрий' },
+      { id: 4, title: 'Погрузка/разгрузка', desc: 'Погрузка продуктов на складе, 4 часа', payment: 400, type: 'hour', category: 'Разнорабочие', city: 'Казань', date: '2026-03-12', employer: 'ООО "Логист"' },
+      { id: 5, title: 'Уборка квартиры после ремонта', desc: 'Генеральная уборка 2-комнатной квартиры', payment: 5000, type: 'fixed', category: 'Клининг', city: 'Екатеринбург', date: '2026-03-15', employer: 'Елена' },
+      { id: 6, title: 'Доставить документы', desc: 'Срочная доставка документов по городу', payment: 800, type: 'fixed', category: 'Курьеры', city: 'Москва', date: '2026-03-09', employer: 'Игорь' },
+      { id: 7, title: 'Вывезти строительный мусор', desc: 'Вывезти мешки с мусором после ремонта', payment: 3500, type: 'fixed', category: 'Грузчики', city: 'Новосибирск', date: '2026-03-11', employer: 'Сергей' },
+      { id: 8, title: 'Монтаж полок', desc: 'Установить 5 полок на стену', payment: 1500, type: 'fixed', category: 'Разнорабочие', city: 'Ростов-на-Дону', date: '2026-03-14', employer: 'Анна' },
+    ];
+
+    // Districts by city
+    const districts = {
+      'Москва': ['Центральный', 'Северный', 'Южный', 'Западный', 'Восточный', 'Зеленоградский'],
+      'Санкт-Петербург': ['Центральный', 'Невский', 'Московский', 'Василеостровский', 'Петроградский'],
+      'Казань': ['Вахитовский', 'Ново-Савиновский', 'Авиастроительный', 'Советский'],
+      'Екатеринбург': ['Центральный', 'Верх-Исетский', 'Кировский', 'Октябрьский'],
+      'Новосибирск': ['Центральный', 'Дзержинский', 'Октябрьский', 'Ленинский'],
+      'Ростов-на-Дону': ['Центральный', 'Пролетарский', 'Ворошиловский', 'Железнодорожный']
+    };
+
+    // ==================== TELEGRAM ====================
+    let telegramUser = null;
+    const tg = window.Telegram.WebApp;
+
+    // Initialize Telegram
+    tg.expand();
+    tg.ready();
+
+    // Get user from Telegram
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      telegramUser = tg.initDataUnsafe.user;
+      console.log('Telegram user:', telegramUser);
+    }
+
+    // ==================== NAVIGATION ====================
+    function navigateTo(page) {
+      // Save user first time
+      if (!currentUser && page !== 'register') {
+        loadUser();
+      }
+      
+      // Show register if no user
+      if (!currentUser && page !== 'register') {
+        showPage('register');
+        return;
+      }
+
+      showPage(page);
+      
+      // Load data for specific pages
+      if (page === 'jobs') {
+        loadJobs();
+      } else if (page === 'my-jobs') {
+        loadMyJobs();
+      } else if (page === 'home') {
+        updateStats();
+      }
+    }
+
+    function showPage(pageName) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      
+      // Show target page
+      const targetPage = document.getElementById('page-' + pageName);
+      if (targetPage) {
+        targetPage.classList.add('active');
+      }
+      
+      // Update nav
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Mark active nav item
+      const pageToNav = {
+        'home': 0,
+        'jobs': 1,
+        'create-job': 2,
+        'my-jobs': 3
+      };
+      
+      if (pageToNav[pageName] !== undefined) {
+        document.querySelectorAll('.nav-item')[pageToNav[pageName]].classList.add('active');
+      }
+    }
+
+    // ==================== REGISTRATION ====================
+    function selectRole(role) {
+      selectedRole = role;
+      
+      // Update UI
+      document.querySelectorAll('.role-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      document.querySelector('.role-card.' + role).classList.add('selected');
+      
+      // Show form after delay
+      setTimeout(() => {
+        document.getElementById('regForm').classList.remove('hidden');
+        document.getElementById('regForm').classList.add('fade-in');
+      }, 200);
+    }
+
+    function submitRegistration(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('regName').value.trim();
+      const city = document.getElementById('regCity').value;
+      const district = document.getElementById('regDistrict').value;
+      
+      if (!name || !city || !selectedRole) {
+        showToast('Заполните все обязательные поля', 'error');
+        return;
+      }
+      
+      // Save user
+      currentUser = {
+        name: name,
+        role: selectedRole,
+        city: city,
+        district: district,
+        telegram_id: telegramUser ? telegramUser.id : Date.now()
+      };
+      
+      saveUser();
+      
+      showToast('Добро пожаловать!', 'success');
+      
+      // Navigate based on role
+      if (selectedRole === 'employer') {
+        navigateTo('create-job');
+      } else {
+        navigateTo('jobs');
+      }
+    }
+
+    // City change handler
+    document.getElementById('regCity').addEventListener('change', function() {
+      const city = this.value;
+      const districtSelect = document.getElementById('regDistrict');
+      
+      districtSelect.innerHTML = '<option value="">Любой район</option>';
+      
+      if (districts[city]) {
+        districts[city].forEach(d => {
+          const option = document.createElement('option');
+          option.value = d;
+          option.textContent = d;
+          districtSelect.appendChild(option);
+        });
+      }
+    });
+
+    // ==================== JOBS ====================
+    function loadJobs() {
+      const container = document.getElementById('jobsList');
+      
+      // Filter jobs
+      let filteredJobs = [...sampleJobs];
+      
+      // Apply quick filter
+      if (currentFilter !== 'all') {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        switch(currentFilter) {
+          case 'today':
+            filteredJobs = filteredJobs.filter(j => j.date === today.toISOString().split('T')[0]);
+            break;
+          case 'tomorrow':
+            filteredJobs = filteredJobs.filter(j => j.date === tomorrow.toISOString().split('T')[0]);
+            break;
+          case 'hour':
+            filteredJobs = filteredJobs.filter(j => j.type === 'hour');
+            break;
+          case 'shift':
+            filteredJobs = filteredJobs.filter(j => j.type === 'shift');
+            break;
+        }
+      }
+      
+      if (filteredJobs.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+              </svg>
+            </div>
+            <h3 class="empty-title">Заказов не найдено</h3>
+            <p class="empty-desc">Попробуйте изменить фильтры</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = filteredJobs.map(job => `
+        <div class="job-card fade-in" onclick="showJobDetail(${job.id})">
+          <div class="job-card-header">
+            <div class="job-title">${job.title}</div>
+            <div class="job-payment">${formatPayment(job)}</div>
+          </div>
+          <div class="job-desc">${job.desc}</div>
+          <div class="job-tags">
+            <span class="job-tag category">${job.category}</span>
+            <span class="job-tag location">📍 ${job.city}</span>
+            <span class="job-tag location">📅 ${formatDate(job.date)}</span>
+          </div>
+          <div class="job-footer">
+            <span class="job-employer">👤 ${job.employer}</span>
+            <button class="job-respond-btn" onclick="event.stopPropagation();respondToJob(${job.id})">Откликнуться</button>
+          </div>
+        </div>
+      `).join('');
+      
+      // Setup quick filters
+      document.querySelectorAll('.quick-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.quick-filter').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          currentFilter = this.dataset.filter;
+          loadJobs();
+        });
+      });
+    }
+
+    function showJobDetail(jobId) {
+      const job = sampleJobs.find(j => j.id === jobId);
+      if (!job) return;
+      
+      // Show job detail in modal or navigate
+      tg.showAlert(`${job.title}\n\n${job.desc}\n\nОплата: ${formatPayment(job)}\nКатегория: ${job.category}\nГород: ${job.city}`);
+    }
+
+    function respondToJob(jobId) {
+      if (!currentUser) {
+        showToast('Сначала зарегистрируйтесь', 'error');
+        navigateTo('register');
+        return;
+      }
+      
+      if (currentUser.role !== 'worker') {
+        showToast('Только исполнители могут откликаться', 'warning');
+        return;
+      }
+      
+      showToast('Отправлена заявка работодателю!', 'success');
+    }
+
+    function formatPayment(job) {
+      if (job.type === 'hour') {
+        return job.payment + ' ₽/час';
+      } else if (job.type === 'shift') {
+        return job.payment + ' ₽/смену';
+      }
+      return job.payment.toLocaleString() + ' ₽';
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      if (date.toDateString() === today.toDateString()) {
+        return 'Сегодня';
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Завтра';
+      }
+      
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+
+    // ==================== CREATE JOB ====================
+    function submitJob(e) {
+      e.preventDefault();
+      
+      if (!currentUser) {
+        showToast('Сначала зарегистрируйтесь', 'error');
+        return;
+      }
+      
+      if (currentUser.role !== 'employer') {
+        showToast('Только работодатели могут создавать заказы', 'warning');
+        return;
+      }
+      
+      const job = {
+        id: Date.now(),
+        title: document.getElementById('jobTitle').value,
+        desc: document.getElementById('jobDesc').value,
+        payment: parseInt(document.getElementById('jobPayment').value),
+        type: document.getElementById('jobPaymentType').value,
+        category: document.getElementById('jobCategory').value,
+        city: document.getElementById('jobCity').value,
+        date: document.getElementById('jobDate').value,
+        employer: currentUser.name,
+        employer_id: currentUser.telegram_id
+      };
+      
+      // Add to jobs
+      sampleJobs.unshift(job);
+      
+      showToast('Заказ опубликован!', 'success');
+      
+      // Clear form
+      e.target.reset();
+      
+      // Navigate to my jobs
+      navigateTo('my-jobs');
+    }
+
+    // ==================== MY JOBS ====================
+    function loadMyJobs() {
+      const container = document.getElementById('myJobsList');
+      
+      if (!currentUser) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              </svg>
+            </div>
+            <h3 class="empty-title">Войдите в аккаунт</h3>
+            <p class="empty-desc">Зарегистрируйтесь, чтобы видеть свои заказы</p>
+            <button class="btn btn-primary mt-4" onclick="navigateTo('register')">Регистрация</button>
+          </div>
+        `;
+        return;
+      }
+      
+      // Filter jobs based on role
+      let myJobs = [];
+      
+      if (currentUser.role === 'employer') {
+        myJobs = sampleJobs.filter(j => j.employer_id === currentUser.telegram_id);
+      } else {
+        // Show responded jobs (for demo, show all)
+        myJobs = sampleJobs.slice(0, 3);
+      }
+      
+      if (myJobs.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              </svg>
+            </div>
+            <h3 class="empty-title">${currentUser.role === 'employer' ? 'У вас пока нет заказов' : 'Вы пока не откликались'}</h3>
+            <p class="empty-desc">${currentUser.role === 'employer' ? 'Создайте первый заказ' : 'Найдите подходящую работу'}</p>
+            <button class="btn btn-primary mt-4" onclick="navigateTo('${currentUser.role === 'employer' ? 'create-job' : 'jobs'}')">
+              ${currentUser.role === 'employer' ? 'Создать заказ' : 'Найти работу'}
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = myJobs.map(job => `
+        <div class="job-card fade-in">
+          <div class="job-card-header">
+            <div class="job-title">${job.title}</div>
+            <div class="job-payment">${formatPayment(job)}</div>
+          </div>
+          <div class="job-tags">
+            <span class="job-tag category">${job.category}</span>
+            <span class="job-tag location">📍 ${job.city}</span>
+            <span class="job-tag location">📅 ${formatDate(job.date)}</span>
+          </div>
+          <div class="job-footer">
+            <span class="job-employer">Статус: ${job.employer_id === currentUser.telegram_id ? 'Ваш заказ' : 'Отклик отправлен'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ==================== STATS ====================
+    function updateStats() {
+      document.getElementById('statJobs').textContent = sampleJobs.length;
+      document.getElementById('statWorkers').textContent = '120+';
+      document.getElementById('statDone').textContent = '89';
+    }
+
+    // ==================== LOCAL STORAGE ====================
+    function saveUser() {
+      localStorage.setItem('trudyagin_user', JSON.stringify(currentUser));
+    }
+
+    function loadUser() {
+      const saved = localStorage.getItem('trudyagin_user');
+      if (saved) {
+        try {
+          currentUser = JSON.parse(saved);
+        } catch(e) {
+          console.error('Error loading user:', e);
+        }
+      }
+    }
+
+    // ==================== TOAST ====================
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // ==================== INIT ====================
+    function init() {
+      loadUser();
+      
+      if (currentUser) {
+        navigateTo('home');
+      } else {
+        showPage('register');
+      }
+      
+      // Set minimum date for job
+      const dateInput = document.getElementById('jobDate');
+      if (dateInput) {
+        dateInput.min = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    // Start app
+    init();
+  </script>
 </body>
 </html>
