@@ -1,0 +1,33 @@
+{
+  "name": "Trudyagin",
+  "description": "Платформа для поиска и выполнения локальных заказов в Telegram",
+  "repository": "https://github.com/RomanGang/trudyaginTG",
+  "build": {
+    "builder": "NIXPACKS_NODE_BUILDER"
+  },
+  "database": {
+    "add": true,
+    "engine": "postgresql"
+  },
+  "services": [
+    {
+      "name": "trudyagin",
+      "github": {
+        "repo": "RomanGang/trudyaginTG"
+      },
+      "build": {
+        "builder": "NIXPACKS_NODE_BUILDER"
+      },
+      "deploy": {
+        "numReplicas": 1,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": "3000"
+      },
+      "volumes": []
+    }
+  ]
+}

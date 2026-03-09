@@ -2,11 +2,26 @@
 
 Платформа для поиска и выполнения локальных заказов.
 
-## 🚀 Запуск
+## 🚀 Быстрый старт (Railway)
+
+### Развёртывание за 1 клик:
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/pnHvNw?referralCode=trudyagin)
+
+1. Нажмите кнопку "Deploy on Railway" выше
+2. Войдите через GitHub
+3. Railway автоматически создаст проект с PostgreSQL базой данных
+4. После деплоя получите URL и настройте Telegram Mini App
+
+---
+
+## 🖥️ Локальный запуск
 
 ```bash
-cd backend
+# Установка зависимостей
 npm install
+
+# Запуск сервера
 npm start
 ```
 

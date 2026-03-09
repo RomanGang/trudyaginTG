@@ -1,18 +1,22 @@
 {
   "name": "trudyagin",
   "version": "1.0.0",
-  "description": "Платформа для поиска и выполнения локальных заказов.",
-  "main": "index.js",
+  "description": "Платформа для поиска и выполнения локальных заказов в Telegram",
+  "main": "backend/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js"
   },
-  "keywords": [],
+  "keywords": ["telegram", "mini-app", "jobs", "workers"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "vercel": "^50.28.0"
   },
   "dependencies": {
-    "pg": "^8.20.0"
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "pg": "^8.20.0",
+    "sqlite3": "^5.1.7"
   }
 }
