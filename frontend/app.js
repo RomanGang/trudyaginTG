@@ -2,17 +2,56 @@
 const API_BASE = window.location.origin;
 
 // ==================== Location Data ====================
+// Real cities and districts for Russia
 const cities = {
-  Москва: ["Центр", "Север", "Юг", "Запад", "Восток", "Северо-Запад", "Северо-Восток", "Юго-Запад", "Юго-Восток"],
-  "Санкт-Петербург": ["Центр", "Север", "Юг", "Василеостровский", "Петроградский", "Кронверкский", "Красногвардейский"],
-  Казань: ["Центр", "Север", "Юг", "Запад", "Восток", "Ново-Савиновский"],
-  Екатеринбург: ["Центр", "Север", "Юг", "Запад", "Восток", "Верх-Исетский", "Ленинский"]
+  Москва: [
+    "Центр", "Север", "Юг", "Запад", "Восток", 
+    "Северо-Запад", "Северо-Восток", "Юго-Запад", "Юго-Восток",
+    "ЗАО", "САО", "СВАО", "ВАО", "ЮВАО", "ЮЗАО", "СЗАО", "ТиНАО"
+  ],
+  "Санкт-Петербург": [
+    "Центр", "Север", "Юг", "Василеостровский", "Петроградский", 
+    "Кронверкский", "Красногвардейский", "Невский", "Фрунзенский",
+    "Калининский", "Кировский", "Красносельский", "Приморский", "Выборгский"
+  ],
+  Екатеринбург: [
+    "Центр", "Север", "Юг", "Запад", "Восток", 
+    "Верх-Исетский", "Ленинский", "Октябрьский", "Железнодорожный",
+    "Кировский", "Чкаловский", "Сибирский", "Пионерский"
+  ],
+  Казань: [
+    "Центр", "Север", "Юг", "Запад", "Восток", 
+    "Ново-Савиновский", "Авиастроительный", "Вахитовский",
+    "Кировский", "Московский", "Ново-Пестрошинский"
+  ],
+  "Верхняя Пышма": [
+    "Центр", "Север", "Юг", "Запад", "Восток",
+    "Успенский", "Клязьма", "Шахтовская", "Октябрьский", "Первомайский"
+  ],
+  "Ростов-на-Дону": [
+    "Центр", "Север", "Юг", "Запад", "Восток",
+    "Ленина", "Пролетарский", "Октябрьский", "Первомайский", "Ворошиловский"
+  ]
 };
+
+// ==================== Job Categories ====================
+const jobCategories = [
+  "Разнорабочие", "Грузчики", "Сварщики", "Маляры", "Клининг",
+  "Сборщики", "Электрики", "Сантехники", "Плиточники", "Штукатуры",
+  "Столяры", "Кровельщики", "Фасадчики", "Механизаторы", "Охранники",
+  "Курьеры", "Водители", "Комплектовщики", "Подсобные рабочие", "Другое"
+];
+
+// ==================== Work Schedule Types ====================
+const workSchedules = ["Ежедневная", "Еженедельная", "Разовая"];
+
+// ==================== Payment Types ====================
+const paymentTypes = ["Почасовая", "За смену", "Договорная"];
 
 // ==================== State ====================
 let currentUser = null;
 let currentPage = 'home';
-let jobFilters = { city: '', district: '', min_payment: '' };
+let jobFilters = { city: '', district: '', min_payment: '', category: '', schedule: '', payment_type: '' };
 let myJobsTab = 'created';
 
 // ==================== Telegram WebApp ====================
@@ -241,6 +280,9 @@ async function loadJobs() {
     if (jobFilters.city) params.append('city', jobFilters.city);
     if (jobFilters.district) params.append('district', jobFilters.district);
     if (jobFilters.min_payment) params.append('min_payment', jobFilters.min_payment);
+    if (jobFilters.category) params.append('category', jobFilters.category);
+    if (jobFilters.schedule) params.append('schedule', jobFilters.schedule);
+    if (jobFilters.payment_type) params.append('payment_type', jobFilters.payment_type);
     
     const jobs = await apiCall(`/jobs?${params.toString()}`);
     
@@ -280,14 +322,21 @@ function createJobCard(job) {
     ? `${workersJoined} из ${workersRequired} работников` 
     : '';
   
+  // Format payment with type
+  let paymentDisplay = formatPayment(job.payment);
+  if (job.payment_type) {
+    paymentDisplay = `${formatPayment(job.payment)} ${job.payment_type !== 'Договорная' ? '/ ' + job.payment_type : ''}`;
+  }
+  
   return `
     <div class="job-card" onclick="showJobDetail(${job.id})">
       <div class="job-card-header">
         <span class="job-card-title">${escapeHtml(job.title)}</span>
-        <span class="job-card-payment">${formatPayment(job.payment)}</span>
+        <span class="job-card-payment">${paymentDisplay}</span>
       </div>
       <p class="job-card-description">${escapeHtml(job.description)}</p>
       <div class="job-card-meta">
+        ${job.category ? `<span class="job-card-tag category-tag">${job.category}</span>` : ''}
         <span class="job-card-tag">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -295,8 +344,9 @@ function createJobCard(job) {
           </svg>
           ${getCityName(job.city)}
         </span>
-        <span class="job-card-tag">${job.district}</span>
+        ${job.district ? `<span class="job-card-tag">${job.district}</span>` : ''}
         <span class="job-card-tag">${formatDate(job.date)}</span>
+        ${job.schedule ? `<span class="job-card-tag">${job.schedule}</span>` : ''}
         ${isMultiWorker ? `<span class="job-card-tag workers-tag">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -998,6 +1048,9 @@ function updateDistrictOptions(citySelect, districtSelect) {
 function setupFilters() {
   const cityFilter = document.getElementById('cityFilter');
   const districtFilter = document.getElementById('districtFilter');
+  const categoryFilter = document.getElementById('categoryFilter');
+  const scheduleFilter = document.getElementById('scheduleFilter');
+  const paymentTypeFilter = document.getElementById('paymentTypeFilter');
   
   cityFilter.addEventListener('change', () => {
     updateDistrictOptions(cityFilter, districtFilter);
@@ -1007,6 +1060,18 @@ function setupFilters() {
   
   districtFilter.addEventListener('change', () => {
     jobFilters.district = districtFilter.value;
+  });
+
+  categoryFilter.addEventListener('change', () => {
+    jobFilters.category = categoryFilter.value;
+  });
+
+  scheduleFilter.addEventListener('change', () => {
+    jobFilters.schedule = scheduleFilter.value;
+  });
+
+  paymentTypeFilter.addEventListener('change', () => {
+    jobFilters.payment_type = paymentTypeFilter.value;
   });
   
   document.getElementById('applyFilters').addEventListener('click', () => {
@@ -1050,7 +1115,10 @@ function setupForms() {
       city: form.jobCity.value,
       district: form.jobDistrict.value,
       date: form.jobDate.value,
-      workers_required: parseInt(form.jobWorkersRequired.value) || 1
+      workers_required: parseInt(form.jobWorkersRequired.value) || 1,
+      category: form.jobCategory.value,
+      schedule: form.jobSchedule.value,
+      payment_type: form.jobPaymentType.value
     });
   });
   

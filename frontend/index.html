@@ -134,9 +134,50 @@
               <option value="Санкт-Петербург">Санкт-Петербург</option>
               <option value="Казань">Казань</option>
               <option value="Екатеринбург">Екатеринбург</option>
+              <option value="Верхняя Пышма">Верхняя Пышма</option>
+              <option value="Ростов-на-Дону">Ростов-на-Дону</option>
             </select>
             <select id="districtFilter" class="filter-select" disabled>
               <option value="">Район</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <select id="categoryFilter" class="filter-select">
+              <option value="">Все категории</option>
+              <option value="Разнорабочие">Разнорабочие</option>
+              <option value="Грузчики">Грузчики</option>
+              <option value="Сварщики">Сварщики</option>
+              <option value="Маляры">Маляры</option>
+              <option value="Клининг">Клининг</option>
+              <option value="Сборщики">Сборщики</option>
+              <option value="Электрики">Электрики</option>
+              <option value="Сантехники">Сантехники</option>
+              <option value="Плиточники">Плиточники</option>
+              <option value="Штукатуры">Штукатуры</option>
+              <option value="Столяры">Столяры</option>
+              <option value="Кровельщики">Кровельщики</option>
+              <option value="Фасадчики">Фасадчики</option>
+              <option value="Механизаторы">Механизаторы</option>
+              <option value="Охранники">Охранники</option>
+              <option value="Курьеры">Курьеры</option>
+              <option value="Водители">Водители</option>
+              <option value="Комплектовщики">Комплектовщики</option>
+              <option value="Подсобные рабочие">Подсобные рабочие</option>
+              <option value="Другое">Другое</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <select id="scheduleFilter" class="filter-select">
+              <option value="">Любой график</option>
+              <option value="Ежедневная">Ежедневная</option>
+              <option value="Еженедельная">Еженедельная</option>
+              <option value="Разовая">Разовая</option>
+            </select>
+            <select id="paymentTypeFilter" class="filter-select">
+              <option value="">Любая оплата</option>
+              <option value="Почасовая">Почасовая</option>
+              <option value="За смену">За смену</option>
+              <option value="Договорная">Договорная</option>
             </select>
           </div>
           <div class="filter-row">
@@ -200,13 +241,61 @@
               <option value="Санкт-Петербург">Санкт-Петербург</option>
               <option value="Казань">Казань</option>
               <option value="Екатеринбург">Екатеринбург</option>
+              <option value="Верхняя Пышма">Верхняя Пышма</option>
+              <option value="Ростов-на-Дону">Ростов-на-Дону</option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="jobDistrict">Район</label>
-            <select id="jobDistrict" required disabled>
+            <select id="jobDistrict">
               <option value="">Сначала выберите город</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="jobCategory">Категория</label>
+            <select id="jobCategory">
+              <option value="">Выберите категорию</option>
+              <option value="Разнорабочие">Разнорабочие</option>
+              <option value="Грузчики">Грузчики</option>
+              <option value="Сварщики">Сварщики</option>
+              <option value="Маляры">Маляры</option>
+              <option value="Клининг">Клининг</option>
+              <option value="Сборщики">Сборщики</option>
+              <option value="Электрики">Электрики</option>
+              <option value="Сантехники">Сантехники</option>
+              <option value="Плиточники">Плиточники</option>
+              <option value="Штукатуры">Штукатуры</option>
+              <option value="Столяры">Столяры</option>
+              <option value="Кровельщики">Кровельщики</option>
+              <option value="Фасадчики">Фасадчики</option>
+              <option value="Механизаторы">Механизаторы</option>
+              <option value="Охранники">Охранники</option>
+              <option value="Курьеры">Курьеры</option>
+              <option value="Водители">Водители</option>
+              <option value="Комплектовщики">Комплектовщики</option>
+              <option value="Подсобные рабочие">Подсобные рабочие</option>
+              <option value="Другое">Другое</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="jobSchedule">График</label>
+            <select id="jobSchedule">
+              <option value="">Выберите график</option>
+              <option value="Ежедневная">Ежедневная</option>
+              <option value="Еженедельная">Еженедельная</option>
+              <option value="Разовая">Разовая</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="jobPaymentType">Тип оплаты</label>
+            <select id="jobPaymentType">
+              <option value="Договорная">Договорная</option>
+              <option value="Почасовая">Почасовая</option>
+              <option value="За смену">За смену</option>
             </select>
           </div>
 

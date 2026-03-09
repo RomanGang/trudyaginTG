@@ -118,7 +118,7 @@ function getNormalizedCity(city) {
 
 // Get all jobs (with filters)
 app.get('/api/jobs', (req, res) => {
-  const { city, district, min_payment, status = 'open' } = req.query;
+  const { city, district, min_payment, status = 'open', category, schedule, payment_type } = req.query;
 
   let sql = 'SELECT j.*, u.name as employer_name FROM jobs j LEFT JOIN users u ON j.employer_id = u.telegram_id WHERE j.status = ?';
   const params = [status];
@@ -138,6 +138,21 @@ app.get('/api/jobs', (req, res) => {
   if (min_payment) {
     sql += ' AND j.payment >= ?';
     params.push(parseFloat(min_payment));
+  }
+
+  if (category) {
+    sql += ' AND j.category = ?';
+    params.push(category);
+  }
+
+  if (schedule) {
+    sql += ' AND j.schedule = ?';
+    params.push(schedule);
+  }
+
+  if (payment_type) {
+    sql += ' AND j.payment_type = ?';
+    params.push(payment_type);
   }
 
   sql += ' ORDER BY j.created_at DESC';
@@ -179,20 +194,20 @@ app.get('/api/notifications/:user_id', (req, res) => {
 
 // Create job
 app.post('/api/jobs', (req, res) => {
-  const { title, description, payment, city, district, date, employer_id, workers_required } = req.body;
+  const { title, description, payment, city, district, date, employer_id, workers_required, category, schedule, payment_type } = req.body;
 
-  if (!title || !description || !payment || !city || !district || !date || !employer_id) {
+  if (!title || !description || !payment || !city || !date || !employer_id) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   const workersRequired = workers_required || 1;
 
   const sql = `
-    INSERT INTO jobs (title, description, payment, city, district, date, employer_id, status, workers_required, workers_joined)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, 0)
+    INSERT INTO jobs (title, description, payment, city, district, date, employer_id, status, workers_required, workers_joined, category, schedule, payment_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, 0, ?, ?, ?)
   `;
 
-  db.run(sql, [title, description, payment, city, district, date, employer_id, workersRequired], function(err) {
+  db.run(sql, [title, description, payment, city, district || null, date, employer_id, workersRequired, category || null, schedule || null, payment_type || null], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
