@@ -1,0 +1,15 @@
+{
+  "name": "trudyagin",
+  "version": "1.0.0",
+  "description": "Платформа для поиска и выполнения локальных заказов.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vercel": "^50.28.0"
+  }
+}

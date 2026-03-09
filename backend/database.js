@@ -1,0 +1,87 @@
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+
+const dbPath = path.join(__dirname, '..', 'database', 'trudyagin.db');
+
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database:', err.message);
+  } else {
+    console.log('Connected to SQLite database');
+    initializeTables();
+  }
+});
+
+function initializeTables() {
+  // Users table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      telegram_id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT,
+      role TEXT CHECK(role IN ('worker', 'employer')) NOT NULL,
+      city TEXT,
+      district TEXT,
+      skills TEXT,
+      rating REAL DEFAULT 0,
+      job_publish_price REAL DEFAULT 0,
+      premium_worker INTEGER DEFAULT 0,
+      commission_percent REAL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Jobs table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      payment REAL NOT NULL,
+      city TEXT NOT NULL,
+      district TEXT NOT NULL,
+      date TEXT NOT NULL,
+      employer_id INTEGER NOT NULL,
+      worker_id INTEGER,
+      status TEXT CHECK(status IN ('open', 'in_progress', 'completed')) DEFAULT 'open',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (employer_id) REFERENCES users(telegram_id),
+      FOREIGN KEY (worker_id) REFERENCES users(telegram_id)
+    )
+  `);
+
+  // Responses table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS responses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id INTEGER NOT NULL,
+      worker_id INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (job_id) REFERENCES jobs(id),
+      FOREIGN KEY (worker_id) REFERENCES users(telegram_id),
+      UNIQUE(job_id, worker_id)
+    )
+  `);
+
+  // Ratings table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user INTEGER NOT NULL,
+      to_user INTEGER NOT NULL,
+      job_id INTEGER NOT NULL,
+      rating INTEGER CHECK(rating >= 1 AND rating <= 5) NOT NULL,
+      comment TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (from_user) REFERENCES users(telegram_id),
+      FOREIGN KEY (to_user) REFERENCES users(telegram_id),
+      FOREIGN KEY (job_id) REFERENCES jobs(id),
+      UNIQUE(from_user, job_id)
+    )
+  `);
+
+  console.log('Database tables initialized');
+}
+
+module.exports = db;

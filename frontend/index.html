@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2481cc">
+  <title>Trudyagin — Быстрые заработки</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Navigation -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button class="nav-btn active" data-page="home">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>Главная</span>
+      </button>
+      <button class="nav-btn" data-page="jobs">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+        </svg>
+        <span>Заказы</span>
+      </button>
+      <button class="nav-btn" data-page="my-jobs">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>Мои</span>
+      </button>
+      <button class="nav-btn" data-page="profile">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Профиль</span>
+      </button>
+    </nav>
+
+    <!-- Pages Container -->
+    <main class="pages-container">
+      <!-- Home Page -->
+      <section class="page active" id="page-home">
+        <header class="page-header">
+          <div class="logo">
+            <div class="logo-icon">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <circle cx="16" cy="16" r="15" fill="url(#logoGrad)"/>
+                <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                  <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+                    <stop offset="0%" stop-color="#2481cc"/>
+                    <stop offset="100%" stop-color="#0d5a9e"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h1>Trudyagin</h1>
+          </div>
+          <button class="notification-btn" id="notificationBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span class="notification-badge" id="notificationBadge">0</span>
+          </button>
+        </header>
+        
+        <div class="welcome-card">
+          <h2>Добро пожаловать!</h2>
+          <p>Находите быстрые заработки или находите исполнителей для своих задач</p>
+          <div class="user-info" id="userInfo" style="display: none;">
+            <span class="user-name" id="displayName"></span>
+            <span class="user-role" id="displayRole"></span>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="action-btn primary" id="btnFindJobs">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="M21 21l-4.35-4.35"></path>
+            </svg>
+            Найти заказы
+          </button>
+          <button class="action-btn secondary" id="btnCreateJob">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Создать заказ
+          </button>
+        </div>
+
+        <!-- Stats for logged in users -->
+        <div class="stats-section" id="statsSection" style="display: none;">
+          <h3>Ваша статистика</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-value" id="statJobsCount">0</span>
+              <span class="stat-label">Заказов</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value" id="statRating">0.0</span>
+              <span class="stat-label">Рейтинг</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Jobs Feed Page -->
+      <section class="page" id="page-jobs">
+        <header class="page-header">
+          <button class="back-btn" id="backBtn" style="display: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2>Заказы</h2>
+        </header>
+
+        <div class="filters">
+          <div class="filter-row">
+            <select id="cityFilter" class="filter-select">
+              <option value="">Все города</option>
+              <option value="Москва">Москва</option>
+              <option value="Санкт-Петербург">Санкт-Петербург</option>
+              <option value="Казань">Казань</option>
+              <option value="Екатеринбург">Екатеринбург</option>
+            </select>
+            <select id="districtFilter" class="filter-select" disabled>
+              <option value="">Район</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <input type="number" id="paymentFilter" class="filter-input" placeholder="Мин. оплата ₽">
+            <button class="filter-btn" id="applyFilters">Применить</button>
+          </div>
+        </div>
+
+        <div class="jobs-list" id="jobsList">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Загрузка заказов...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Create Job Page -->
+      <section class="page" id="page-create-job">
+        <header class="page-header">
+          <button class="back-btn" data-back="jobs">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2>Создать заказ</h2>
+        </header>
+
+        <form class="form" id="createJobForm">
+          <div class="form-group">
+            <label for="jobTitle">Название</label>
+            <input type="text" id="jobTitle" required placeholder="Например: Перевезти мебель">
+          </div>
+
+          <div class="form-group">
+            <label for="jobDescription">Описание</label>
+            <textarea id="jobDescription" required rows="4" placeholder="Подробно опишите задачу..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="jobPayment">Оплата (₽)</label>
+              <input type="number" id="jobPayment" required min="1" placeholder="1000">
+            </div>
+            <div class="form-group">
+              <label for="jobDate">Дата</label>
+              <input type="date" id="jobDate" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="jobCity">Город</label>
+            <select id="jobCity" required>
+              <option value="">Выберите город</option>
+              <option value="Москва">Москва</option>
+              <option value="Санкт-Петербург">Санкт-Петербург</option>
+              <option value="Казань">Казань</option>
+              <option value="Екатеринбург">Екатеринбург</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="jobDistrict">Район</label>
+            <select id="jobDistrict" required disabled>
+              <option value="">Сначала выберите город</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-primary">Опубликовать заказ</button>
+        </form>
+      </section>
+
+      <!-- My Jobs Page -->
+      <section class="page" id="page-my-jobs">
+        <header class="page-header">
+          <h2>Мои заказы</h2>
+        </header>
+
+        <div class="tabs">
+          <button class="tab active" data-tab="created">Созданные</button>
+          <button class="tab" data-tab="responded">Отклики</button>
+        </div>
+
+        <div class="my-jobs-content" id="myJobsContent">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Загрузка...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Job Detail Page -->
+      <section class="page" id="page-job-detail">
+        <header class="page-header">
+          <button class="back-btn" data-back="jobs">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2>Заказ</h2>
+        </header>
+
+        <div class="job-detail" id="jobDetail">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Applicants Page -->
+      <section class="page" id="page-applicants">
+        <header class="page-header">
+          <button class="back-btn" data-back="my-jobs">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2>Отклики</h2>
+        </header>
+
+        <div class="applicants-list" id="applicantsList">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Profile Page -->
+      <section class="page" id="page-profile">
+        <header class="page-header">
+          <h2>Профиль</h2>
+        </header>
+
+        <div class="profile-card">
+          <div class="avatar">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <h3 id="profileName">—</h3>
+          <p class="role-badge" id="profileRole">—</p>
+          <div class="rating" id="profileRating">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>0.0</span>
+          </div>
+        </div>
+
+        <form class="form" id="profileForm">
+          <div class="form-group">
+            <label for="profileNameInput">Имя</label>
+            <input type="text" id="profileNameInput" placeholder="Ваше имя">
+          </div>
+
+          <div class="form-group">
+            <label for="profilePhone">Телефон</label>
+            <input type="tel" id="profilePhone" placeholder="+7 (999) 000-00-00">
+          </div>
+
+          <div class="form-group">
+            <label for="profileCity">Город</label>
+            <select id="profileCity">
+              <option value="">Выберите город</option>
+              <option value="Москва">Москва</option>
+              <option value="Санкт-Петербург">Санкт-Петербург</option>
+              <option value="Казань">Казань</option>
+              <option value="Екатеринбург">Екатеринбург</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="profileDistrict">Район</label>
+            <select id="profileDistrict" disabled>
+              <option value="">Сначала выберите город</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="skillsGroup">
+            <label for="profileSkills">Навыки</label>
+            <textarea id="profileSkills" rows="3" placeholder="Перечислите ваши навыки..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary">Сохранить профиль</button>
+        </form>
+
+        <div class="profile-actions">
+          <button class="btn-secondary" id="btnViewRatings">Мои отзывы</button>
+        </div>
+      </section>
+
+      <!-- Registration Page -->
+      <section class="page" id="page-register">
+        <div class="register-container">
+          <div class="logo-large">
+            <svg width="80" height="80" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="15" fill="url(#logoGrad2)"/>
+              <path d="M10 16L14 20L22 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs>
+                <linearGradient id="logoGrad2" x1="0" y1="0" x2="32" y2="32">
+                  <stop offset="0%" stop-color="#2481cc"/>
+                  <stop offset="100%" stop-color="#0d5a9e"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h1>Trudyagin</h1>
+          <p class="tagline">Быстрые заработки для всех</p>
+
+          <form class="form" id="registerForm">
+            <div class="form-group">
+              <label for="regName">Ваше имя</label>
+              <input type="text" id="regName" required placeholder="Как к вам обращаться">
+            </div>
+
+            <div class="form-group">
+              <label>Выберите роль</label>
+              <div class="role-selector">
+                <label class="role-option">
+                  <input type="radio" name="role" value="worker" checked>
+                  <div class="role-card">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="8.5" cy="7" r="4"></circle>
+                      <path d="M20 8v6M23 11h-6"></path>
+                    </svg>
+                    <span>Исполнитель</span>
+                    <small>Хочу выполнять заказы</small>
+                  </div>
+                </label>
+                <label class="role-option">
+                  <input type="radio" name="role" value="employer">
+                  <div class="role-card">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="9" cy="7" r="4"></circle>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Заказчик</span>
+                    <small>Хочу создавать заказы</small>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="regCity">Город</label>
+              <select id="regCity" required>
+                <option value="">Выберите город</option>
+                <option value="Москва">Москва</option>
+                <option value="Санкт-Петербург">Санкт-Петербург</option>
+                <option value="Казань">Казань</option>
+                <option value="Екатеринбург">Екатеринбург</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="regDistrict">Район</label>
+              <select id="regDistrict" disabled required>
+                <option value="">Сначала выберите город</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn-primary btn-large">Продолжить</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Notifications Page -->
+      <section class="page" id="page-notifications">
+        <header class="page-header">
+          <button class="back-btn" data-back="home">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2>Уведомления</h2>
+        </header>
+
+        <div class="notifications-list" id="notificationsList">
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <p>Нет новых уведомлений</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ratings Page -->
+      <section class="page" id="page-ratings">
+        <header class="page-header">
+          <button class="back-btn" data-back="profile">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h2>Отзывы</h2>
+        </header>
+
+        <div class="ratings-list" id="ratingsList">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
