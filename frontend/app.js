@@ -1322,12 +1322,12 @@ function setupRegistration() {
     }
   };
   
-  // Form submit
-  document.getElementById('regForm').onsubmit = function(e) {
+  // Form submit - handle button click instead
+  document.getElementById('submitRegBtn').onclick = function(e) {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('Form submitted!');
+    console.log('Button clicked!');
     console.log('selectedRole:', selectedRole);
     console.log('telegramUser:', telegramUser);
     
