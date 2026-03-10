@@ -1615,7 +1615,7 @@
   <script>
     // ==================== CONFIG ====================
     // Change this to your production API URL
-    const API_BASE = window.location.origin + '/api';
+    const API_BASE = 'https://sad-toes-tan.loca.lt/api';
     
     // ==================== STATE ====================
     let currentUser = null;
@@ -1644,6 +1644,13 @@
             ...options.headers
           }
         });
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Not JSON response');
+        }
+        
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || 'API error');
@@ -1651,7 +1658,6 @@
         return data;
       } catch (error) {
         console.error('API Error:', error);
-        showToast(error.message || 'Ошибка соединения', 'error');
         throw error;
       }
     }
