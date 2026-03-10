@@ -1184,14 +1184,14 @@
           <h3 style="text-align: center; margin-bottom: 24px; font-size: 20px;">Регистрация</h3>
           
           <div class="role-cards" style="margin-bottom: 24px;">
-            <div class="role-card worker" onclick="selectRole('worker', this)" id="roleWorker">
+            <div class="role-card worker" id="roleWorker" data-role="worker">
               <div class="role-icon">👷</div>
               <div class="role-info">
                 <h3>Исполнитель</h3>
                 <p>Хочу найти работу</p>
               </div>
             </div>
-            <div class="role-card employer" onclick="selectRole('employer', this)" id="roleEmployer">
+            <div class="role-card employer" id="roleEmployer" data-role="employer">
               <div class="role-icon">🏢</div>
               <div class="role-info">
                 <h3>Работодатель</h3>
@@ -1974,7 +1974,6 @@
     
     function doRegister() {
       console.log('doRegister called, selectedRole:', selectedRole);
-      alert('doRegister: role=' + selectedRole);
       
       const name = document.getElementById('regName').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
@@ -2077,7 +2076,7 @@
       });
     }
     
-    function selectRole(role, element) {
+    function selectRole(role) {
       selectedRole = role;
       console.log('selectRole called, role:', role);
       
@@ -2088,12 +2087,9 @@
         card.style.background = '';
       });
       
-      // Find the role-card element (might be the clicked element or its parent)
-      let card = element;
-      while (card && !card.classList.contains('role-card')) {
-        card = card.parentElement;
-      }
-      
+      // Add selected to clicked card
+      const cardId = role === 'worker' ? 'roleWorker' : 'roleEmployer';
+      const card = document.getElementById(cardId);
       if (card) {
         card.classList.add('selected');
         card.style.borderColor = '#2563EB';
@@ -3239,6 +3235,10 @@
       if (dateInput) {
         dateInput.min = new Date().toISOString().split('T')[0];
       }
+      
+      // Add click listeners for role cards
+      document.getElementById('roleWorker')?.addEventListener('click', () => selectRole('worker'));
+      document.getElementById('roleEmployer')?.addEventListener('click', () => selectRole('employer'));
     }
 
     // Start app
