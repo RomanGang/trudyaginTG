@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 // Bot token from BotFather
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN || 'YOUR_BOT_TOKEN_HERE';
+const TOKEN = '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A';
 
 // Create bot
 const bot = new TelegramBot(TOKEN, { polling: true });
