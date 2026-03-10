@@ -145,27 +145,35 @@ def send_code():
     
     # Send via Telegram Bot
     bot_token = '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A'
+    telegram_sent = False
+    
     try:
         import requests
         
         # If we have Telegram ID, send directly to user
         if telegram_id:
-            requests.post(
-                f'https://api.telegram.org/bot{bot_token}/sendMessage',
-                json={
-                    'chat_id': str(telegram_id),
-                    'text': f'🔐 Код подтверждения Трудягин: {code}'
-                },
-                timeout=5
-            )
-            return jsonify({'success': True, 'message': 'Код отправлен в Telegram'})
+            try:
+                resp = requests.post(
+                    f'https://api.telegram.org/bot{bot_token}/sendMessage',
+                    json={
+                        'chat_id': str(telegram_id),
+                        'text': f'🔐 Код подтверждения Трудягин: {code}'
+                    },
+                    timeout=5
+                )
+                if resp.status_code == 200:
+                    telegram_sent = True
+            except Exception as e:
+                print(f"Telegram API error: {e}")
         
-        # Otherwise try to find user by phone (if linked)
-        # For now, return debug code as fallback
-    except Exception as e:
-        print(f"Telegram send error: {e}")
+    except ImportError:
+        print("requests not available")
     
-    # Return code for development/testing
+    # Return result
+    if telegram_sent:
+        return jsonify({'success': True, 'message': 'Код отправлен в Telegram'})
+    
+    # Return code for testing (when not in Telegram or API fails)
     return jsonify({'success': True, 'message': 'Код отправлен', 'debug_code': code})
 
 @app.route('/api/login', methods=['POST'])
