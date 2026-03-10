@@ -1,6 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+
+// Telegram WebApp types
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        ready: () => void;
+        expand: () => void;
+        close: () => void;
+        sendData: (data: string) => void;
+        onEvent: (event: string, callback: () => void) => void;
+        initDataUnsafe?: {
+          user?: {
+            id: number;
+            first_name: string;
+            last_name?: string;
+            username?: string;
+          };
+        };
+        themeParams: {
+          bg_color: string;
+          text_color: string;
+          hint_color: string;
+          button_color: string;
+          button_text_color: string;
+        };
+      };
+    };
+  }
+}
 
 interface User {
   id: string;
@@ -23,19 +53,121 @@ interface Job {
   district?: string;
   date: string;
   status: string;
-  employer: { name: string; rating: number };
+  employer?: { name: string; rating: number };
 }
 
 const CITIES: Record<string, string[]> = {
   Москва: ["Центральный", "Северный", "Южный", "Западный", "Восточный"],
   "Санкт-Петербург": ["Центральный", "Невский"],
   Казань: ["Вахитовский", "Кировский"],
-  Екатеринбург: ["Центральный", "Верх-Исетский"],
+  Екатеринбург: ["Верх-Исетский", "Ленинский", "Октябрьский"],
 };
 
 const CATEGORIES = ["Грузчики", "Разнорабочие", "Клининг", "Сборщики", "Водители", "Курьеры", "Строительство", "Ремонт", "Другое"];
 
-function BottomNav({ currentPage, onNavigate }: { currentPage: string; onNavigate: (page: string) => void }) {
+const API_BASE = "/api";
+
+function showError(msg: string) {
+  const el = document.getElementById("error-toast");
+  if (el) {
+    el.textContent = msg;
+    el.style.display = "block";
+    setTimeout(() => el.style.display = "none", 3000);
+  }
+}
+
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [page, setPage] = useState("home");
+  const [loading, setLoading] = useState(false);
+
+  // Load user from session
+  useEffect(() => {
+    const saved = sessionStorage.getItem("trudyagin_user");
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch (e) {
+        sessionStorage.removeItem("trudyagin_user");
+      }
+    }
+  }, []);
+
+  // Save user to session
+  const saveUser = useCallback((u: User) => {
+    setUser(u);
+    sessionStorage.setItem("trudyagin_user", JSON.stringify(u));
+  }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    sessionStorage.removeItem("trudyagin_user");
+    setPage("home");
+  }, []);
+
+  // Get Telegram user info
+  const getTelegramUser = useCallback(() => {
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const tUser = window.Telegram.WebApp.initDataUnsafe.user;
+      return {
+        id: String(tUser.id),
+        name: tUser.first_name + (tUser.last_name ? " " + tUser.last_name : ""),
+        username: tUser.username || "",
+      };
+    }
+    return null;
+  }, []);
+
+  // Initialize Telegram
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+  }, []);
+
+  // Navigate
+  const navigate = useCallback((newPage: string) => {
+    setPage(newPage);
+  }, []);
+
+  if (!user) {
+    return <AuthPage onLogin={saveUser} />;
+  }
+
+  return (
+    <div className="app-container">
+      <Header user={user} onLogout={logout} />
+      
+      <main className="main-content">
+        {page === "home" && <HomePage user={user} onNavigate={navigate} />}
+        {page === "jobs" && <JobsPage user={user} />}
+        {page === "create-job" && <CreateJobPage user={user} onNavigate={navigate} />}
+        {page === "my-jobs" && <MyJobsPage user={user} />}
+        {page === "profile" && <ProfilePage user={user} onLogout={logout} />}
+      </main>
+
+      <BottomNav currentPage={page} onNavigate={navigate} />
+      <div id="error-toast" className="error-toast" style={{ display: "none" }}></div>
+    </div>
+  );
+}
+
+function Header({ user, onLogout }: { user: User; onLogout: () => void }) {
+  const tgUser = typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user;
+  
+  return (
+    <header className="header">
+      <div className="header-left">
+        <span className="logo">Т</span>
+        <span className="header-title">Трудягин</span>
+      </div>
+      <button className="header-btn" onClick={onLogout}>Выйти</button>
+    </header>
+  );
+}
+
+function BottomNav({ currentPage, onNavigate }: { currentPage: string; onNavigate: (p: string) => void }) {
   const items = [
     { id: "home", icon: "🏠", label: "Главная" },
     { id: "jobs", icon: "💼", label: "Заказы" },
@@ -43,90 +175,49 @@ function BottomNav({ currentPage, onNavigate }: { currentPage: string; onNavigat
     { id: "my-jobs", icon: "📋", label: "Мои" },
     { id: "profile", icon: "👤", label: "Профиль" },
   ];
+
+  // Hide create-job for workers
+  const filteredItems = items;
+
   return (
-    <div className="bottom-nav">
-      {items.map((item) => (
-        <div key={item.id} className={`bottom-nav-item ${currentPage === item.id ? "active" : ""}`} onClick={() => onNavigate(item.id)}>
-          <span style={{ fontSize: 20 }}>{item.icon}</span>
-          <span>{item.label}</span>
-        </div>
+    <nav className="bottom-nav">
+      {filteredItems.map((item) => (
+        <button
+          key={item.id}
+          className={`nav-item ${currentPage === item.id ? "active" : ""}`}
+          onClick={() => onNavigate(item.id)}
+        >
+          <span className="nav-icon">{item.icon}</span>
+          <span className="nav-label">{item.label}</span>
+        </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [page, setPage] = useState<string>("home");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const saved = sessionStorage.getItem("trudyagin_user");
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch (e) {}
-    }
-  }, []);
-
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-    sessionStorage.setItem("trudyagin_user", JSON.stringify(userData));
-    setPage("home");
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    sessionStorage.removeItem("trudyagin_user");
-  };
-
-  // Auth Page
-  if (!user) {
-    return <AuthPage onLogin={handleLogin} setError={setError} error={error} />;
-  }
-
-  return (
-    <>
-      {page === "home" && <HomePage user={user} />}
-      {page === "jobs" && <JobsPage user={user} />}
-      {page === "create-job" && <CreateJobPage user={user} onCreated={() => setPage("my-jobs")} />}
-      {page === "my-jobs" && <MyJobsPage user={user} />}
-      {page === "profile" && <ProfilePage user={user} onLogout={handleLogout} />}
-      <BottomNav currentPage={page} onNavigate={setPage} />
-    </>
-  );
-}
-
-function AuthPage({ onLogin, setError, error }: { onLogin: (u: User) => void; setError: (e: string) => void; error: string }) {
-  const [isRegister, setIsRegister] = useState(false);
-  const [step, setStep] = useState<"phone" | "code" | "form">("phone");
-  const [role, setRole] = useState<"worker" | "employer" | null>(null);
+function AuthPage({ onLogin }: { onLogin: (u: User) => void }) {
+  const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [city, setCity] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const tgUser = typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
 
   const sendCode = async () => {
     if (!phone) return setError("Введите номер телефона");
     setError("");
     setLoading(true);
-    
-    // Timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      setError("Превышен таймаут. Попробуйте снова.");
-    }, 15000);
-    
+
     try {
-      console.log("Sending code to:", phone);
-      const res = await fetch("/api/auth/send-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
-      console.log("Response status:", res.status);
+      const res = await fetch(`${API_BASE}/auth/send-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
       const data = await res.json();
-      console.log("Response data:", data);
-      clearTimeout(timeout);
+      
       if (data.success) {
         setStep("code");
         if (data.debug_code) setCode(data.debug_code);
@@ -134,118 +225,135 @@ function AuthPage({ onLogin, setError, error }: { onLogin: (u: User) => void; se
         setError(data.message || "Ошибка");
       }
     } catch (e) {
-      console.error("Error:", e);
-      clearTimeout(timeout);
       setError("Ошибка соединения");
     }
     setLoading(false);
   };
 
-  const verifyCode = async () => {
-    if (!code || !phone || !password) return setError("Заполните все поля");
-    setError("");
-    
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      setError("Превышен таймаут");
-    }, 15000);
-    
-    if (isRegister) {
-      clearTimeout(timeout);
-      setStep("form");
-    } else {
-      setLoading(true);
-      try {
-        console.log("Logging in with:", phone);
-        const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, password }) });
-        console.log("Login response:", res.status);
-        const data = await res.json();
-        console.log("Login data:", data);
-        clearTimeout(timeout);
-        if (data.success) onLogin(data.user);
-        else setError(data.message || "Ошибка");
-      } catch (e) {
-        console.error("Login error:", e);
-        clearTimeout(timeout);
-        setError("Ошибка");
-      }
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!name || !password || password !== confirmPassword || !city || !role) return setError("Заполните все поля корректно");
+  const login = async () => {
+    if (!phone || !password) return setError("Введите телефон и пароль");
     setError("");
     setLoading(true);
-    
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      setError("Превышен таймаут");
-    }, 15000);
-    
+
     try {
-      console.log("Registering:", name, phone, role, city);
-      const res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, phone, code, password, role, city }) });
-      console.log("Register response:", res.status);
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password }),
+      });
       const data = await res.json();
-      console.log("Register data:", data);
-      clearTimeout(timeout);
-      if (data.success) onLogin(data.user);
-      else setError(data.message || "Ошибка");
+      
+      if (data.success) {
+        onLogin(data.user);
+      } else {
+        setError(data.message || "Ошибка входа");
+      }
     } catch (e) {
-      console.error("Register error:", e);
-      clearTimeout(timeout);
-      setError("Ошибка");
+      setError("Ошибка соединения");
     }
     setLoading(false);
   };
 
   return (
-    <div className="page-container" style={{ paddingTop: 40 }}>
-      {error && <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: '#dc2626', color: 'white', padding: '12px 24px', borderRadius: 8, zIndex: 1000 }}>{error}</div>}
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>Т</div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Трудягин</h1>
-        <p style={{ color: "#666" }}>Находите работу рядом</p>
-      </div>
-      <div className="card">
-        <h2 style={{ marginBottom: 16 }}>{isRegister ? "Регистрация" : "Вход"}</h2>
-        {step === "phone" && <>
-          <input type="tel" className="input" placeholder="+7 999 123-45-67" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ marginBottom: 12 }} />
-          <button className="btn btn-primary" style={{ width: "100%" }} onClick={sendCode} disabled={loading}>{loading ? "..." : "Получить код"}</button>
-        </>}
-        {step === "code" && <>
-          <input type="text" className="input" placeholder="Код из SMS" value={code} onChange={(e) => setCode(e.target.value)} style={{ marginBottom: 12 }} />
-          <input type="password" className="input" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginBottom: 12 }} />
-          <button className="btn btn-primary" style={{ width: "100%" }} onClick={verifyCode} disabled={loading}>{loading ? "..." : "Продолжить"}</button>
-        </>}
-        {step === "form" && <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <div style={{ flex: 1, textAlign: "center", cursor: "pointer", border: role === "worker" ? "2px solid #2563EB" : "2px solid #e5e5e5", borderRadius: 8, padding: 12 }} onClick={() => setRole("worker")}><div style={{ fontSize: 32 }}>👷</div><div>Исполнитель</div></div>
-            <div style={{ flex: 1, textAlign: "center", cursor: "pointer", border: role === "employer" ? "2px solid #2563EB" : "2px solid #e5e5e5", borderRadius: 8, padding: 12 }} onClick={() => setRole("employer")}><div style={{ fontSize: 32 }}>🏢</div><div>Работодатель</div></div>
-          </div>
-          <input type="text" className="input" placeholder="Ваше имя" value={name} onChange={(e) => setName(e.target.value)} style={{ marginBottom: 12 }} />
-          <input type="password" className="input" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} style={{ marginBottom: 12 }} />
-          <input type="password" className="input" placeholder="Повторите пароль" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ marginBottom: 12 }} />
-          <select className="input" value={city} onChange={(e) => setCity(e.target.value)} style={{ marginBottom: 12 }}><option value="">Выберите город</option>{Object.keys(CITIES).map(c => <option key={c} value={c}>{c}</option>)}</select>
-          <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleRegister} disabled={loading}>{loading ? "..." : "Зарегистрироваться"}</button>
-        </>}
-        <p style={{ marginTop: 16, textAlign: "center", color: "#666" }}>{isRegister ? "Уже есть аккаунт? " : "Нет аккаунта? "}<span style={{ color: "#2563EB", cursor: "pointer" }} onClick={() => { setIsRegister(!isRegister); setStep("phone"); }}>{isRegister ? "Войти" : "Зарегистрироваться"}</span></p>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">Т</div>
+        <h1>Трудягин</h1>
+        <p className="auth-subtitle">Находите работу рядом</p>
+
+        {error && <div className="error-message">{error}</div>}
+
+        {step === "phone" && (
+          <>
+            <input
+              type="tel"
+              className="input"
+              placeholder="+7 999 123-45-67"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <input
+              type="password"
+              className="input"
+              placeholder="Придумайте пароль"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button className="btn btn-primary" onClick={sendCode} disabled={loading}>
+              {loading ? "Отправка..." : "Продолжить"}
+            </button>
+            <p className="auth-link">
+              Нет аккаунта? <a href="#" onClick={(e) => { e.preventDefault(); sendCode(); }}>Зарегистрироваться</a>
+            </p>
+          </>
+        )}
+
+        {step === "code" && (
+          <>
+            <input
+              type="text"
+              className="input"
+              placeholder="Код из SMS"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+            <button className="btn btn-primary" onClick={login} disabled={loading}>
+              {loading ? "Вход..." : "Войти"}
+            </button>
+            <button className="btn btn-link" onClick={() => setStep("phone")}>
+              Назад
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function HomePage({ user }: { user: User }) {
+function HomePage({ user, onNavigate }: { user: User; onNavigate: (p: string) => void }) {
   const [stats, setStats] = useState({ jobs: 0, workers: 0, done: 0 });
-  useEffect(() => { fetch("/api/stats").then(r => r.json()).then(setStats).catch(() => {}); }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/stats`)
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
   return (
-    <div className="page-container">
-      <div style={{ textAlign: "center", marginBottom: 24 }}><h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Трудягин</h1><p style={{ color: "#666" }}>Разовые и ежедневные задания</p></div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}><button className="btn btn-primary" style={{ flex: 1 }} onClick={() => window.location.hash = "jobs"}>Найти работу</button>{user.role === "employer" && <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => window.location.hash = "create-job"}>Создать заказ</button>}</div>
-      <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 24 }}>
-        <div style={{ textAlign: "center" }}><div style={{ fontSize: 24, fontWeight: 700, color: "#2563EB" }}>{stats.jobs}</div><div style={{ fontSize: 12, color: "#666" }}>Активных</div></div>
-        <div style={{ textAlign: "center" }}><div style={{ fontSize: 24, fontWeight: 700, color: "#2563EB" }}>{stats.workers}</div><div style={{ fontSize: 12, color: "#666" }}>Исполнителей</div></div>
+    <div className="page">
+      <h2>Добро пожаловать, {user.name}!</h2>
+      
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-value">{stats.jobs}</div>
+          <div className="stat-label">Активных заказов</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{stats.workers}</div>
+          <div className="stat-label">Исполнителей</div>
+        </div>
+      </div>
+
+      <div className="action-buttons">
+        {user.role === "worker" ? (
+          <button className="btn btn-primary btn-large" onClick={() => onNavigate("jobs")}>
+            Найти работу
+          </button>
+        ) : (
+          <button className="btn btn-primary btn-large" onClick={() => onNavigate("create-job")}>
+            Создать заказ
+          </button>
+        )}
+      </div>
+
+      <div className="quick-links">
+        <button className="quick-link" onClick={() => onNavigate("jobs")}>
+          💼 Все заказы
+        </button>
+        <button className="quick-link" onClick={() => onNavigate("my-jobs")}>
+          📋 Мои заказы
+        </button>
       </div>
     </div>
   );
@@ -255,24 +363,80 @@ function JobsPage({ user }: { user: User }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [cityFilter, setCityFilter] = useState("");
   const [loading, setLoading] = useState(true);
-  useEffect(() => { fetch("/api/jobs").then(r => r.json()).then(d => setJobs(d.jobs || [])).finally(() => setLoading(false)); }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/jobs${cityFilter ? `?city=${encodeURIComponent(cityFilter)}` : ""}`)
+      .then((r) => r.json())
+      .then((d) => setJobs(d.jobs || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [cityFilter]);
+
+  const respondToJob = async (jobId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, workerId: user.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Отклик отправлен!");
+      } else {
+        alert(data.message || "Ошибка");
+      }
+    } catch (e) {
+      alert("Ошибка соединения");
+    }
+  };
+
   return (
-    <div className="page-container">
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Заказы</h2>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}><select className="input" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} style={{ flex: 1 }}><option value="">Все города</option>{Object.keys(CITIES).map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-      {loading ? <div>Загрузка...</div> : jobs.length === 0 ? <div className="card" style={{ textAlign: "center", color: "#666" }}>Заказов пока нет</div> : jobs.map(job => (
-        <div key={job.id} className="job-card">
-          <div className="job-card-header"><div className="job-card-title">{job.title}</div><div className="job-card-price">{job.payment.toLocaleString()} ₽</div></div>
-          <div style={{ color: "#666", fontSize: 14, marginBottom: 8 }}>{job.description}</div>
-          <div className="job-card-meta"><span>📍 {job.city}</span><span>📅 {new Date(job.date).toLocaleDateString("ru-RU")}</span><span>👷 {job.category}</span></div>
-          {user.role === "worker" && <button className="btn btn-primary" style={{ width: "100%", marginTop: 12 }} onClick={async () => { await fetch("/api/responses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: job.id, workerId: user.id }) }); alert("Отклик отправлен!"); }}>Откликнуться</button>}
+    <div className="page">
+      <h2>Заказы</h2>
+
+      <select
+        className="input"
+        value={cityFilter}
+        onChange={(e) => setCityFilter(e.target.value)}
+      >
+        <option value="">Все города</option>
+        {Object.keys(CITIES).map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
+
+      {loading ? (
+        <div className="loading">Загрузка...</div>
+      ) : jobs.length === 0 ? (
+        <div className="empty-state">Заказов пока нет</div>
+      ) : (
+        <div className="jobs-list">
+          {jobs.map((job) => (
+            <div key={job.id} className="job-card">
+              <div className="job-header">
+                <h3>{job.title}</h3>
+                <span className="job-price">{job.payment.toLocaleString()} ₽</span>
+              </div>
+              <p className="job-description">{job.description}</p>
+              <div className="job-meta">
+                <span>📍 {job.city}</span>
+                <span>📅 {new Date(job.date).toLocaleDateString("ru-RU")}</span>
+                <span>👷 {job.category}</span>
+              </div>
+              {user.role === "worker" && (
+                <button className="btn btn-primary" onClick={() => respondToJob(job.id)}>
+                  Откликнуться
+                </button>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
-function CreateJobPage({ user, onCreated }: { user: User; onCreated: () => void }) {
+function CreateJobPage({ user, onNavigate }: { user: User; onNavigate: (p: string) => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [payment, setPayment] = useState("");
@@ -280,25 +444,97 @@ function CreateJobPage({ user, onCreated }: { user: User; onCreated: () => void 
   const [city, setCity] = useState(user.city);
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
+
   const handleSubmit = async () => {
-    if (!title || !description || !payment || !category || !city || !date) return alert("Заполните все поля");
+    if (!title || !description || !payment || !category || !city || !date) {
+      showError("Заполните все поля");
+      return;
+    }
+
     setLoading(true);
-    const res = await fetch("/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, description, payment: Number(payment), category, city, date, employerId: user.id }) });
-    const data = await res.json();
-    if (data.success) { alert("Заказ создан!"); onCreated(); }
+    try {
+      const res = await fetch(`${API_BASE}/jobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          payment: Number(payment),
+          category,
+          city,
+          date,
+          employerId: user.id,
+        }),
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert("Заказ создан!");
+        onNavigate("my-jobs");
+      } else {
+        showError(data.message || "Ошибка");
+      }
+    } catch (e) {
+      showError("Ошибка соединения");
+    }
     setLoading(false);
   };
+
   return (
-    <div className="page-container">
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Создать заказ</h2>
-      <div className="card">
-        <input type="text" className="input" placeholder="Название" value={title} onChange={(e) => setTitle(e.target.value)} style={{ marginBottom: 12 }} />
-        <textarea className="input" placeholder="Описание" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ marginBottom: 12 }} />
-        <input type="number" className="input" placeholder="Оплата (₽)" value={payment} onChange={(e) => setPayment(e.target.value)} style={{ marginBottom: 12 }} />
-        <select className="input" value={category} onChange={(e) => setCategory(e.target.value)} style={{ marginBottom: 12 }}><option value="">Категория</option>{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-        <select className="input" value={city} onChange={(e) => setCity(e.target.value)} style={{ marginBottom: 12 }}><option value="">Город</option>{Object.keys(CITIES).map(c => <option key={c} value={c}>{c}</option>)}</select>
-        <input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} style={{ marginBottom: 12 }} />
-        <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleSubmit} disabled={loading}>{loading ? "..." : "Опубликовать"}</button>
+    <div className="page">
+      <h2>Создать заказ</h2>
+      
+      <div className="form">
+        <input
+          type="text"
+          className="input"
+          placeholder="Название"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <textarea
+          className="input"
+          placeholder="Описание"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+        />
+        <input
+          type="number"
+          className="input"
+          placeholder="Оплата (₽)"
+          value={payment}
+          onChange={(e) => setPayment(e.target.value)}
+        />
+        <select
+          className="input"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">Категория</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          className="input"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+        >
+          <option value="">Город</option>
+          {Object.keys(CITIES).map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <input
+          type="date"
+          className="input"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <button className="btn btn-primary btn-large" onClick={handleSubmit} disabled={loading}>
+          {loading ? "Создание..." : "Опубликовать"}
+        </button>
       </div>
     </div>
   );
@@ -306,33 +542,68 @@ function CreateJobPage({ user, onCreated }: { user: User; onCreated: () => void 
 
 function MyJobsPage({ user }: { user: User }) {
   const [jobs, setJobs] = useState<Job[]>([]);
-  useEffect(() => { fetch(`/api/my-jobs?userId=${user.id}&role=${user.role}`).then(r => r.json()).then(d => setJobs(d.jobs || [])).catch(() => {}); }, [user]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/my-jobs?userId=${user.id}&role=${user.role}`)
+      .then((r) => r.json())
+      .then((d) => setJobs(d.jobs || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user]);
+
   return (
-    <div className="page-container">
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>Мои заказы</h2>
-      {jobs.length === 0 ? <div className="card" style={{ textAlign: "center", color: "#666" }}>Пока нет заказов</div> : jobs.map(job => (
-        <div key={job.id} className="job-card">
-          <div className="job-card-header"><div className="job-card-title">{job.title}</div><div className="job-card-price">{job.payment.toLocaleString()} ₽</div></div>
-          <span className={`badge badge-${job.status === "open" ? "open" : "progress"}`}>{job.status === "open" ? "Открыт" : "В работе"}</span>
+    <div className="page">
+      <h2>Мои заказы</h2>
+      
+      {loading ? (
+        <div className="loading">Загрузка...</div>
+      ) : jobs.length === 0 ? (
+        <div className="empty-state">Заказов пока нет</div>
+      ) : (
+        <div className="jobs-list">
+          {jobs.map((job) => (
+            <div key={job.id} className="job-card">
+              <div className="job-header">
+                <h3>{job.title}</h3>
+                <span className="job-price">{job.payment.toLocaleString()} ₽</span>
+              </div>
+              <span className={`status-badge ${job.status}`}>
+                {job.status === "open" ? "Открыт" : job.status === "in_progress" ? "В работе" : "Завершён"}
+              </span>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
 function ProfilePage({ user, onLogout }: { user: User; onLogout: () => void }) {
   return (
-    <div className="page-container">
-      <div className="card" style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>👤</div>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>{user.name}</h2>
-        <p style={{ color: "#666", marginBottom: 8 }}>{user.role === "worker" ? "Исполнитель" : "Работодатель"}</p>
-        <p style={{ color: "#666", fontSize: 14 }}>📍 {user.city}</p>
-        <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 24 }}>
-          <div><div style={{ fontSize: 24, fontWeight: 700, color: "#2563EB" }}>⭐ {user.rating.toFixed(1)}</div><div style={{ fontSize: 12, color: "#666" }}>Рейтинг</div></div>
-          <div><div style={{ fontSize: 24, fontWeight: 700, color: "#2563EB" }}>{user.jobsDone}</div><div style={{ fontSize: 12, color: "#666" }}>Заданий</div></div>
+    <div className="page">
+      <div className="profile-card">
+        <div className="profile-avatar">👤</div>
+        <h2>{user.name}</h2>
+        <p className="profile-role">
+          {user.role === "worker" ? "Исполнитель" : "Работодатель"}
+        </p>
+        <p className="profile-location">📍 {user.city}</p>
+        
+        <div className="profile-stats">
+          <div className="profile-stat">
+            <div className="stat-value">⭐ {user.rating.toFixed(1)}</div>
+            <div className="stat-label">Рейтинг</div>
+          </div>
+          <div className="profile-stat">
+            <div className="stat-value">{user.jobsDone}</div>
+            <div className="stat-label">Заданий</div>
+          </div>
         </div>
-        <button className="btn btn-secondary" style={{ width: "100%", marginTop: 16 }} onClick={onLogout}>Выйти</button>
+
+        <button className="btn btn-secondary" onClick={onLogout}>
+          Выйти
+        </button>
       </div>
     </div>
   );
