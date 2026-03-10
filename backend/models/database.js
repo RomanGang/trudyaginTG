@@ -37,6 +37,8 @@ class Database {
         category TEXT,
         city TEXT,
         district TEXT,
+        latitude REAL,
+        longitude REAL,
         date TEXT,
         employer_id INTEGER,
         worker_id INTEGER,

@@ -1146,6 +1146,9 @@
       color: #166534;
     }
   </style>
+  
+  <!-- Yandex Maps API -->
+  <script src="https://api-maps.yandex.ru/2.1/?apikey=YOUR_YANDEX_API_KEY&lang=ru_RU"></script>
 </head>
 <body>
   <div id="app">
@@ -1376,6 +1379,19 @@
         <button class="quick-filter" data-filter="weekend">Выходные</button>
         <button class="quick-filter" data-filter="hour">Почасовая</button>
         <button class="quick-filter" data-filter="shift">За смену</button>
+        <button class="quick-filter" onclick="toggleMap()" style="margin-left: auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+          Карта
+        </button>
+      </div>
+
+      <!-- Map Container -->
+      <div id="mapContainer" style="display: none; height: 300px; width: 100%;">
+        <div id="jobsMap" style="width: 100%; height: 100%;"></div>
       </div>
 
       <div class="content">
@@ -2130,13 +2146,19 @@
       if (currentFilter === 'shift') params += (params ? '&' : '') + 'type=shift';
       
       apiCall('/jobs' + (params ? '?' + params : '')).then(jobs => {
+        window.jobs = jobs; // Store for map
         renderJobs(jobs, container);
+        // Update map if visible
+        if (mapVisible && mapInstance) {
+          updateMapJobs();
+        }
       }).catch(() => {
         // Fallback - show demo data
         const demoJobs = [
           { id: 1, title: 'Перевезти вещи на дачу', description: 'Нужно перевезти коробки и мебель', payment: 3000, payment_type: 'fixed', category: 'Грузчики', city: 'Москва', date: '2026-03-10', employer_name: 'Александр' },
           { id: 2, title: 'Помыть окна в офисе', description: 'Требуется помыть 10 окон', payment: 2500, payment_type: 'fixed', category: 'Клининг', city: 'Москва', date: '2026-03-11', employer_name: 'Мария' },
         ];
+        window.jobs = demoJobs;
         renderJobs(demoJobs, container);
       });
     }
@@ -2746,6 +2768,103 @@
     function searchJobs() {
       searchQuery = document.getElementById('jobSearch').value;
       loadJobs();
+    }
+
+    // ==================== MAP ====================
+    let mapInstance = null;
+    let mapVisible = false;
+
+    // City coordinates for map
+    const cityCoords = {
+      'Москва': [55.7558, 37.6173],
+      'Санкт-Петербург': [59.9343, 30.3351],
+      'Казань': [55.8304, 49.0661],
+      'Екатеринбург': [56.8389, 60.6057],
+      'Новосибирск': [55.0084, 82.9357],
+      'Ростов-на-Дону': [47.2221, 39.7203]
+    };
+
+    function toggleMap() {
+      const mapContainer = document.getElementById('mapContainer');
+      mapVisible = !mapVisible;
+      
+      if (mapVisible) {
+        mapContainer.style.display = 'block';
+        if (!mapInstance) {
+          initMap();
+        } else {
+          updateMapJobs();
+        }
+      } else {
+        mapContainer.style.display = 'none';
+      }
+    }
+
+    function initMap() {
+      if (typeof ymaps === 'undefined') {
+        console.log('Yandex Maps not loaded yet');
+        return;
+      }
+      
+      ymaps.ready().then(function() {
+        // Default to Moscow
+        const defaultCity = currentUser?.city || 'Москва';
+        const coords = cityCoords[defaultCity] || cityCoords['Москва'];
+        
+        mapInstance = new ymaps.Map('jobsMap', {
+          center: coords,
+          zoom: 10,
+          controls: ['zoomControl', 'fullscreenControl']
+        });
+        
+        updateMapJobs();
+      });
+    }
+
+    function updateMapJobs() {
+      if (!mapInstance || !jobs || jobs.length === 0) return;
+      
+      mapInstance.geoObjects.removeAll();
+      
+      // Filter jobs with coordinates (for now, use city centers as placeholder)
+      jobs.forEach(job => {
+        const cityName = job.city || 'Москва';
+        const coords = cityCoords[cityName];
+        
+        if (coords) {
+          // Add small random offset to separate markers
+          const offsetX = (Math.random() - 0.5) * 0.02;
+          const offsetY = (Math.random() - 0.5) * 0.02;
+          
+          const placemark = new ymaps.Placemark(
+            [coords[0] + offsetX, coords[1] + offsetY],
+            {
+              balloonContentHeader: job.title,
+              balloonContentBody: `
+                <div style="padding: 5px;">
+                  <div><b>${job.title}</b></div>
+                  <div>${job.payment ? job.payment + ' ₽' : ''}</div>
+                  <div>${job.city} ${job.district || ''}</div>
+                </div>
+              `
+            },
+            {
+              preset: 'islands#blueDotIcon'
+            }
+          );
+          
+          placemark.events.add('click', function() {
+            showJobDetail(job);
+          });
+          
+          mapInstance.geoObjects.add(placemark);
+        }
+      });
+      
+      // Fit bounds to show all markers
+      if (jobs.length > 0) {
+        mapInstance.setBounds(mapInstance.geoObjects.getBounds(), { checkZoomRange: true });
+      }
     }
 
     // ==================== PROFILE ====================
