@@ -134,6 +134,7 @@ def send_code():
     """Send SMS verification code via Telegram"""
     req_data = request.json
     phone = req_data.get('phone', '').strip()
+    telegram_id = req_data.get('telegram_id')  # User's Telegram ID
     
     if not phone:
         return jsonify({'error': 'Введите номер телефона'}), 400
@@ -142,28 +143,27 @@ def send_code():
     code = generate_sms_code()
     sms_codes[phone] = code
     
-    # Option 1: Send via Telegram Bot (if telegram_id provided)
-    telegram_id = req_data.get('telegram_id')
-    if telegram_id:
-        try:
-            bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-            if bot_token:
-                import requests
-                requests.post(
-                    f'https://api.telegram.org/bot{bot_token}/sendMessage',
-                    json={
-                        'chat_id': telegram_id,
-                        'text': f'🔐 Код подтверждения Трудягин: {code}'
-                    },
-                    timeout=5
-                )
-                return jsonify({'success': True, 'message': 'Код отправлен в Telegram'})
-        except Exception as e:
-            print(f"Telegram send error: {e}")
-    
-    # Option 2: For Russian numbers, try SMS via email-to-sms gateway
-    # Many Russian carriers allow sending SMS via email
-    # This is a fallback - codes will work but may not deliver
+    # Send via Telegram Bot
+    bot_token = '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A'
+    try:
+        import requests
+        
+        # If we have Telegram ID, send directly to user
+        if telegram_id:
+            requests.post(
+                f'https://api.telegram.org/bot{bot_token}/sendMessage',
+                json={
+                    'chat_id': str(telegram_id),
+                    'text': f'🔐 Код подтверждения Трудягин: {code}'
+                },
+                timeout=5
+            )
+            return jsonify({'success': True, 'message': 'Код отправлен в Telegram'})
+        
+        # Otherwise try to find user by phone (if linked)
+        # For now, return debug code as fallback
+    except Exception as e:
+        print(f"Telegram send error: {e}")
     
     # Return code for development/testing
     return jsonify({'success': True, 'message': 'Код отправлен', 'debug_code': code})

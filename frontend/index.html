@@ -1898,7 +1898,13 @@
       btn.disabled = true;
       btn.textContent = 'Отправка...';
       
-      apiCall('/send-code', 'POST', { phone: phone }).then(data => {
+      // Get Telegram ID if available
+      const telegramId = telegramUser ? telegramUser.id : null;
+      
+      apiCall('/send-code', 'POST', { 
+        phone: phone,
+        telegram_id: telegramId
+      }).then(data => {
         // Show success message
         if (data.debug_code) {
           showToast('Код отправлен! (Тест: ' + data.debug_code + ')', 'success');
