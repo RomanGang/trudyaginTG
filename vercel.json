@@ -2,7 +2,12 @@
   "builds": [
     {
       "src": "frontend/**/*",
-      "use": "@vercel/static"
+      "use": "@vercel/static",
+      "config": {
+        "cacheControl": {
+          "no-cache": true
+        }
+      }
     },
     {
       "src": "api/main.py",
@@ -18,12 +23,15 @@
       "dest": "/api/main.py"
     },
     {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
-    },
-    {
       "src": "/",
       "dest": "/frontend/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
     }
   ]
 }
