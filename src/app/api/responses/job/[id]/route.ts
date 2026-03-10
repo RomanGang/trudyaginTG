@@ -1,33 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const responses = await prisma.response.findMany({
-      where: { jobId: params.id },
-      include: {
-        worker: {
-          select: {
-            id: true,
-            name: true,
-            rating: true,
-            city: true,
-            jobsDone: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return NextResponse.json({ responses });
+    const responses = db.getResponses(params.id);
+    const responsesWithWorkers = responses.map(r => ({
+      ...r,
+      worker: db.getUserById(r.workerId)
+    }));
+    return NextResponse.json({ responses: responsesWithWorkers });
   } catch (error) {
-    console.error('get responses error:', error);
-    return NextResponse.json(
-      { message: 'Ошибка получения откликов' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Ошибка' }, { status: 500 });
   }
 }

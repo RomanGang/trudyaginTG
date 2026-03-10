@@ -1,36 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { db } from '@/lib/db';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
   try {
-    const ratings = await prisma.rating.findMany({
-      where: { toUserId: params.userId },
-      include: {
-        fromUser: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        job: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return NextResponse.json({ ratings });
+    const ratings = db.getRatings(params.userId);
+    const ratingsWithUsers = ratings.map(r => ({
+      ...r,
+      fromUser: db.getUserById(r.fromUserId)
+    }));
+    return NextResponse.json({ ratings: ratingsWithUsers });
   } catch (error) {
-    console.error('get ratings error:', error);
-    return NextResponse.json(
-      { message: 'Ошибка получения отзывов' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Ошибка' }, { status: 500 });
   }
 }
