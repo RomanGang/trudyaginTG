@@ -1,134 +1,94 @@
 import os
-import sqlite3
 import json
+from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__, static_folder='frontend')
 
-# Database path
-DB_PATH = os.path.join(os.path.dirname(__file__), 'trudyagin.db')
+# File-based storage - persists during session on most platforms
+DATA_FILE = '/tmp/trudyagin_data.json'
 
-def init_db():
-    """Initialize database tables"""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id TEXT UNIQUE,
-            name TEXT,
-            phone TEXT,
-            role TEXT,
-            city TEXT,
-            district TEXT,
-            rating REAL DEFAULT 0,
-            jobs_done INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            payment INTEGER,
-            payment_type TEXT DEFAULT 'fixed',
-            category TEXT,
-            city TEXT,
-            district TEXT,
-            date TEXT,
-            employer_id INTEGER,
-            employer_name TEXT,
-            status TEXT DEFAULT 'open',
-            requirements TEXT,
-            selected_worker_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS responses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_id INTEGER,
-            worker_id INTEGER,
-            worker_name TEXT,
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS ratings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            from_user INTEGER,
-            to_user INTEGER,
-            job_id INTEGER,
-            rating INTEGER,
-            comment TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+def load_data():
+    """Load data from JSON file"""
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {
+        'users': {},
+        'jobs': {},
+        'responses': {},
+        'ratings': {}
+    }
 
-# Initialize DB on startup
-init_db()
+def save_data(data):
+    """Save data to JSON file"""
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f)
+    except:
+        pass
 
-def dict_from_row(row, columns):
-    return dict(zip(columns, row))
+# Initialize data
+data = load_data()
+next_ids = {'user': 1, 'job': 1, 'response': 1, 'rating': 1}
 
 # ==================== API ROUTES ====================
 
 @app.route('/api/health')
 def health():
-    return jsonify({'status': 'ok', 'timestamp': '2026-03-09'})
+    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
 @app.route('/api/register', methods=['POST'])
 def register():
-    data = request.json
-    telegram_id = data.get('telegram_id')
-    name = data.get('name')
-    role = data.get('role')
-    city = data.get('city', '')
-    district = data.get('district', '')
-    phone = data.get('phone', '')
+    global data, next_ids
+    req_data = request.json
     
-    if not telegram_id or not name or not role:
+    telegram_id = str(req_data.get('telegram_id', ''))
+    name = req_data.get('name', '')
+    role = req_data.get('role', 'worker')
+    city = req_data.get('city', '')
+    district = req_data.get('district', '')
+    phone = req_data.get('phone', '')
+    
+    if not telegram_id or not name:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    # Check if user exists
+    for uid, user in data['users'].items():
+        if user.get('telegram_id') == telegram_id:
+            return jsonify({'success': True, 'user': user})
     
-    c.execute('''
-        INSERT OR REPLACE INTO users (telegram_id, name, phone, role, city, district)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (telegram_id, name, phone, role, city, district))
+    # Create new user
+    user_id = str(next_ids['user'])
+    next_ids['user'] += 1
     
-    c.execute('SELECT * FROM users WHERE telegram_id = ?', (telegram_id,))
-    columns = [col[0] for col in c.description]
-    user = dict_from_row(c.fetchone(), columns)
+    user = {
+        'id': user_id,
+        'telegram_id': telegram_id,
+        'name': name,
+        'phone': phone,
+        'role': role,
+        'city': city,
+        'district': district,
+        'rating': 0,
+        'jobs_done': 0,
+        'created_at': datetime.now().isoformat()
+    }
     
-    conn.commit()
-    conn.close()
+    data['users'][user_id] = user
+    save_data(data)
     
     return jsonify({'success': True, 'user': user})
 
 @app.route('/api/user/<telegram_id>')
 def get_user(telegram_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE telegram_id = ?', (telegram_id,))
-    columns = [col[0] for col in c.description]
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
-        return jsonify({'error': 'User not found'}), 404
-    
-    return jsonify(dict_from_row(row, columns))
+    for user in data['users'].values():
+        if user.get('telegram_id') == telegram_id:
+            return jsonify(user)
+    return jsonify({'error': 'User not found'}), 404
 
 @app.route('/api/jobs')
 def get_jobs():
@@ -137,304 +97,263 @@ def get_jobs():
     search = request.args.get('search')
     job_type = request.args.get('type')
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    sql = 'SELECT * FROM jobs WHERE status != "completed"'
-    params = []
+    jobs = [j for j in data['jobs'].values() if j.get('status') != 'completed']
     
     if city:
-        sql += ' AND city = ?'
-        params.append(city)
+        jobs = [j for j in jobs if j.get('city') == city]
     if category:
-        sql += ' AND category = ?'
-        params.append(category)
+        jobs = [j for j in jobs if j.get('category') == category]
     if search:
-        sql += ' AND (title LIKE ? OR description LIKE ?)'
-        params.extend([f'%{search}%', f'%{search}%'])
+        search = search.lower()
+        jobs = [j for j in jobs if search in j.get('title', '').lower() or search in j.get('description', '').lower()]
     if job_type == 'hour':
-        sql += ' AND payment_type = "hour"'
+        jobs = [j for j in jobs if j.get('payment_type') == 'hour']
     elif job_type == 'shift':
-        sql += ' AND payment_type = "shift"'
+        jobs = [j for j in jobs if j.get('payment_type') == 'shift']
     
-    sql += ' ORDER BY created_at DESC LIMIT 50'
-    
-    c.execute(sql, params)
-    columns = [col[0] for col in c.description]
-    jobs = [dict_from_row(row, columns) for row in c.fetchall()]
-    conn.close()
-    
-    return jsonify(jobs)
+    jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+    return jsonify(jobs[:50])
 
 @app.route('/api/jobs/<int:job_id>')
 def get_job(job_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT * FROM jobs WHERE id = ?', (job_id,))
-    columns = [col[0] for col in c.description]
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
+    job = data['jobs'].get(str(job_id))
+    if not job:
         return jsonify({'error': 'Job not found'}), 404
-    
-    return jsonify(dict_from_row(row, columns))
+    return jsonify(job)
 
 @app.route('/api/jobs', methods=['POST'])
 def create_job():
-    data = request.json
+    global data, next_ids
+    req_data = request.json
     
-    title = data.get('title')
-    description = data.get('description')
-    payment = data.get('payment')
-    employer_id = data.get('employer_id')
+    title = req_data.get('title', '')
+    description = req_data.get('description', '')
+    payment = req_data.get('payment', 0)
+    employer_id = req_data.get('employer_id')
     
     if not title or not description or not payment or not employer_id:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    job_id = str(next_ids['job'])
+    next_ids['job'] += 1
     
-    c.execute('''
-        INSERT INTO jobs (title, description, payment, payment_type, category, city, district, date, employer_id, employer_name, requirements)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        title, description, payment,
-        data.get('payment_type', 'fixed'),
-        data.get('category', ''),
-        data.get('city', ''),
-        data.get('district', ''),
-        data.get('date', ''),
-        employer_id,
-        data.get('employer_name', ''),
-        json.dumps(data.get('requirements', {}))
-    ))
+    job = {
+        'id': job_id,
+        'title': title,
+        'description': description,
+        'payment': payment,
+        'payment_type': req_data.get('payment_type', 'fixed'),
+        'category': req_data.get('category', ''),
+        'city': req_data.get('city', ''),
+        'district': req_data.get('district', ''),
+        'date': req_data.get('date', ''),
+        'employer_id': employer_id,
+        'employer_name': req_data.get('employer_name', ''),
+        'status': 'open',
+        'requirements': json.dumps(req_data.get('requirements', {})),
+        'selected_worker_id': None,
+        'created_at': datetime.now().isoformat()
+    }
     
-    job_id = c.lastrowid
-    c.execute('SELECT * FROM jobs WHERE id = ?', (job_id,))
-    columns = [col[0] for col in c.description]
-    job = dict_from_row(c.fetchone(), columns)
-    
-    conn.commit()
-    conn.close()
+    data['jobs'][job_id] = job
+    save_data(data)
     
     return jsonify({'success': True, 'job': job})
 
 @app.route('/api/jobs/<int:job_id>', methods=['PUT'])
 def update_job(job_id):
-    data = request.json
-    status = data.get('status')
-    selected_worker_id = data.get('selected_worker_id')
+    global data
+    req_data = request.json
+    job = data['jobs'].get(str(job_id))
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
     
-    updates = []
-    params = []
+    if 'status' in req_data:
+        job['status'] = req_data['status']
+    if 'selected_worker_id' in req_data:
+        job['selected_worker_id'] = req_data['selected_worker_id']
     
-    if status:
-        updates.append('status = ?')
-        params.append(status)
-    if selected_worker_id:
-        updates.append('selected_worker_id = ?')
-        params.append(selected_worker_id)
+    data['jobs'][str(job_id)] = job
+    save_data(data)
     
-    if updates:
-        params.append(job_id)
-        c.execute(f'UPDATE jobs SET {", ".join(updates)} WHERE id = ?', params)
-        conn.commit()
-    
-    conn.close()
     return jsonify({'success': True})
 
 @app.route('/api/my-jobs/employer/<int:employer_id>')
 def get_employer_jobs(employer_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    jobs = [j for j in data['jobs'].values() if str(j.get('employer_id')) == str(employer_id)]
     
-    c.execute('''
-        SELECT j.*, 
-            (SELECT COUNT(*) FROM responses WHERE job_id = j.id) as responses_count
-        FROM jobs j 
-        WHERE j.employer_id = ? 
-        ORDER BY j.created_at DESC
-    ''', (employer_id,))
+    for job in jobs:
+        job['responses_count'] = len([r for r in data['responses'].values() if str(r.get('job_id')) == str(job['id'])])
     
-    columns = [col[0] for col in c.description]
-    jobs = [dict_from_row(row, columns) for row in c.fetchall()]
-    conn.close()
-    
+    jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
     return jsonify(jobs)
 
 @app.route('/api/my-jobs/worker/<int:worker_id>')
 def get_worker_jobs(worker_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    responses = [r for r in data['responses'].values() if str(r.get('worker_id')) == str(worker_id)]
     
-    c.execute('''
-        SELECT r.*, j.title, j.description, j.payment, j.city, j.status as job_status, j.selected_worker_id, j.employer_name
-        FROM responses r
-        JOIN jobs j ON r.job_id = j.id
-        WHERE r.worker_id = ?
-        ORDER BY r.created_at DESC
-    ''', (worker_id,))
-    
-    columns = [col[0] for col in c.description]
-    jobs = [dict_from_row(row, columns) for row in c.fetchall()]
-    conn.close()
+    jobs = []
+    for r in responses:
+        job = data['jobs'].get(str(r.get('job_id')))
+        if job:
+            job_with_response = {**job, 'response_status': r.get('status')}
+            jobs.append(job_with_response)
     
     return jsonify(jobs)
 
 @app.route('/api/respond', methods=['POST'])
 def respond():
-    data = request.json
-    job_id = data.get('job_id')
-    worker_id = data.get('worker_id')
-    worker_name = data.get('worker_name', '')
+    global data, next_ids
+    req_data = request.json
+    
+    job_id = str(req_data.get('job_id'))
+    worker_id = str(req_data.get('worker_id'))
+    worker_name = req_data.get('worker_name', '')
     
     if not job_id or not worker_id:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    for r in data['responses'].values():
+        if str(r.get('job_id')) == job_id and str(r.get('worker_id')) == worker_id:
+            return jsonify({'error': 'Already responded to this job'}), 400
     
-    c.execute('SELECT * FROM responses WHERE job_id = ? AND worker_id = ?', (job_id, worker_id))
-    if c.fetchone():
-        conn.close()
-        return jsonify({'error': 'Already responded to this job'}), 400
+    response_id = str(next_ids['response'])
+    next_ids['response'] += 1
     
-    c.execute('INSERT INTO responses (job_id, worker_id, worker_name) VALUES (?, ?, ?)',
-              (job_id, worker_id, worker_name))
+    response = {
+        'id': response_id,
+        'job_id': job_id,
+        'worker_id': worker_id,
+        'worker_name': worker_name,
+        'status': 'pending',
+        'created_at': datetime.now().isoformat()
+    }
     
-    conn.commit()
-    conn.close()
+    data['responses'][response_id] = response
+    save_data(data)
     
     return jsonify({'success': True})
 
 @app.route('/api/responses/job/<int:job_id>')
 def get_responses(job_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    responses = [r for r in data['responses'].values() if str(r.get('job_id')) == str(job_id)]
     
-    c.execute('''
-        SELECT r.*, u.name, u.city, u.district, u.rating, u.jobs_done
-        FROM responses r
-        JOIN users u ON r.worker_id = u.id
-        WHERE r.job_id = ?
-        ORDER BY r.created_at DESC
-    ''', (job_id,))
-    
-    columns = [col[0] for col in c.description]
-    responses = [dict_from_row(row, columns) for row in c.fetchall()]
-    conn.close()
+    for r in responses:
+        worker = data['users'].get(str(r.get('worker_id')))
+        if worker:
+            r['name'] = worker.get('name', '')
+            r['city'] = worker.get('city', '')
+            r['district'] = worker.get('district', '')
+            r['rating'] = worker.get('rating', 0)
+            r['jobs_done'] = worker.get('jobs_done', 0)
     
     return jsonify(responses)
 
 @app.route('/api/select-worker', methods=['POST'])
 def select_worker():
-    data = request.json
-    job_id = data.get('job_id')
-    worker_id = data.get('worker_id')
+    global data
+    req_data = request.json
+    
+    job_id = str(req_data.get('job_id'))
+    worker_id = str(req_data.get('worker_id'))
     
     if not job_id or not worker_id:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    job = data['jobs'].get(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 400
     
-    c.execute('UPDATE jobs SET status = "in_progress", selected_worker_id = ? WHERE id = ?', (worker_id, job_id))
-    c.execute('UPDATE responses SET status = "accepted" WHERE job_id = ? AND worker_id = ?', (job_id, worker_id))
-    c.execute('UPDATE responses SET status = "rejected" WHERE job_id = ? AND worker_id != ?', (job_id, worker_id))
+    job['status'] = 'in_progress'
+    job['selected_worker_id'] = worker_id
     
-    c.execute('SELECT * FROM jobs WHERE id = ?', (job_id,))
-    columns = [col[0] for col in c.description]
-    job = dict_from_row(c.fetchone(), columns)
+    for r in data['responses'].values():
+        if str(r.get('job_id')) == job_id:
+            if str(r.get('worker_id')) == worker_id:
+                r['status'] = 'accepted'
+            else:
+                r['status'] = 'rejected'
     
-    conn.commit()
-    conn.close()
-    
+    save_data(data)
     return jsonify({'success': True, 'job': job})
 
 @app.route('/api/rate', methods=['POST'])
 def rate():
-    data = request.json
-    from_user = data.get('from_user')
-    to_user = data.get('to_user')
-    job_id = data.get('job_id')
-    rating = data.get('rating')
-    comment = data.get('comment', '')
+    global data, next_ids
+    req_data = request.json
+    
+    from_user = str(req_data.get('from_user'))
+    to_user = str(req_data.get('to_user'))
+    job_id = str(req_data.get('job_id'))
+    rating = req_data.get('rating', 5)
+    comment = req_data.get('comment', '')
     
     if not from_user or not to_user or not rating:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    rating_id = str(next_ids['rating'])
+    next_ids['rating'] += 1
     
-    c.execute('INSERT INTO ratings (from_user, to_user, job_id, rating, comment) VALUES (?, ?, ?, ?, ?)',
-              (from_user, to_user, job_id, rating, comment))
+    rating_obj = {
+        'id': rating_id,
+        'from_user': from_user,
+        'to_user': to_user,
+        'job_id': job_id,
+        'rating': rating,
+        'comment': comment,
+        'created_at': datetime.now().isoformat()
+    }
     
-    c.execute('SELECT AVG(rating) as avg FROM ratings WHERE to_user = ?', (to_user,))
-    avg = c.fetchone()[0] or rating
+    data['ratings'][rating_id] = rating_obj
     
-    c.execute('UPDATE users SET rating = ?, jobs_done = jobs_done + 1 WHERE id = ?', (avg, to_user))
-    c.execute('UPDATE jobs SET status = "completed" WHERE id = ?', (job_id,))
+    user = data['users'].get(to_user)
+    if user:
+        ratings = [r.get('rating') for r in data['ratings'].values() if str(r.get('to_user')) == to_user]
+        user['rating'] = sum(ratings) / len(ratings) if ratings else rating
+        user['jobs_done'] = user.get('jobs_done', 0) + 1
     
-    conn.commit()
-    conn.close()
+    job = data['jobs'].get(job_id)
+    if job:
+        job['status'] = 'completed'
     
+    save_data(data)
     return jsonify({'success': True})
 
 @app.route('/api/reviews/<int:user_id>')
 def get_reviews(user_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    reviews = [r for r in data['ratings'].values() if str(r.get('to_user')) == str(user_id)]
     
-    c.execute('''
-        SELECT r.*, u.name as from_name
-        FROM ratings r
-        JOIN users u ON r.from_user = u.id
-        WHERE r.to_user = ?
-        ORDER BY r.created_at DESC
-        LIMIT 20
-    ''', (user_id,))
-    
-    columns = [col[0] for col in c.description]
-    reviews = [dict_from_row(row, columns) for row in c.fetchall()]
-    conn.close()
+    for r in reviews:
+        user = data['users'].get(str(r.get('from_user')))
+        if user:
+            r['from_name'] = user.get('name', '')
     
     return jsonify(reviews)
 
 @app.route('/api/users/<int:user_id>')
 def get_user_by_id(user_id):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    c.execute('''SELECT id, telegram_id, name, role, city, district, rating, jobs_done, created_at 
-                 FROM users WHERE id = ?''', (user_id,))
-    columns = [col[0] for col in c.description]
-    row = c.fetchone()
-    conn.close()
-    
-    if not row:
+    user = data['users'].get(str(user_id))
+    if not user:
         return jsonify({'error': 'User not found'}), 404
     
-    return jsonify(dict_from_row(row, columns))
+    return jsonify({
+        'id': user.get('id'),
+        'telegram_id': user.get('telegram_id'),
+        'name': user.get('name'),
+        'role': user.get('role'),
+        'city': user.get('city'),
+        'district': user.get('district'),
+        'rating': user.get('rating'),
+        'jobs_done': user.get('jobs_done'),
+        'created_at': user.get('created_at')
+    })
 
 @app.route('/api/stats')
 def stats():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    c.execute('SELECT COUNT(*) FROM jobs WHERE status = "open"')
-    jobs = c.fetchone()[0] or 0
-    
-    c.execute('SELECT COUNT(*) FROM users WHERE role = "worker"')
-    workers = c.fetchone()[0] or 0
-    
-    c.execute('SELECT COUNT(*) FROM jobs WHERE status = "completed"')
-    done = c.fetchone()[0] or 0
-    
-    conn.close()
+    jobs = len([j for j in data['jobs'].values() if j.get('status') == 'open'])
+    workers = len([u for u in data['users'].values() if u.get('role') == 'worker'])
+    done = len([j for j in data['jobs'].values() if j.get('status') == 'completed'])
     
     return jsonify({'jobs': jobs, 'workers': workers, 'done': done})
 

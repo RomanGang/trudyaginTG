@@ -8,7 +8,7 @@ const TOKEN = '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A';
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 // API URL (change this to your production API)
-const API_URL = process.env.API_URL || 'http://localhost:3000/api';
+const API_URL = 'https://tall-badgers-hope.loca.lt/api';
 
 // Start command
 bot.onText(/\/start/, (msg) => {

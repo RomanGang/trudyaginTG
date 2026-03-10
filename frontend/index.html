@@ -1614,8 +1614,10 @@
 
   <script>
     // ==================== CONFIG ====================
-    // Change this to your production API URL
-    const API_BASE = 'https://sad-toes-tan.loca.lt/api';
+    // Use current origin for API (works on all deployments)
+    const API_BASE = (window.location.protocol === 'file:') 
+      ? 'https://tall-badgers-hope.loca.lt/api'
+      : window.location.origin + '/api';
     
     // ==================== STATE ====================
     let currentUser = null;
@@ -1904,11 +1906,14 @@
 
     function shareJob(jobId) {
       apiCall('/jobs/' + jobId).then(job => {
+        const baseUrl = (window.location.protocol === 'file:') 
+          ? 'https://tall-badgers-hope.loca.lt'
+          : window.location.origin;
         const text = `🔍 Нашёл работу в Трудягин!\n\n` +
           `📌 ${job.title}\n` +
           `💰 ${formatPayment(job)}\n` +
           `📍 ${job.city}\n\n` +
-          `Откликнись: https://trudyagin-tg-ej5c.vercel.app/?job=${jobId}`;
+          `Откликнись: ${baseUrl}/?job=${jobId}`;
         
         tg.shareUrl(text);
       }).catch(() => {
