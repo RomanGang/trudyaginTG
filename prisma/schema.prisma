@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -41,7 +41,7 @@ model Job {
   status       String   @default("open")
   employerId   String
   workerId     String?
-  createdAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   employer  User       @relation("EmployerJobs", fields: [employerId], references: [id])
