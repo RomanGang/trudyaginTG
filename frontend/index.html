@@ -1899,7 +1899,12 @@
       btn.textContent = 'Отправка...';
       
       apiCall('/send-code', 'POST', { phone: phone }).then(data => {
-        showToast('Код отправлен! (Для теста: ' + data.debug_code + ')', 'success');
+        // Show success message
+        if (data.debug_code) {
+          showToast('Код отправлен! (Тест: ' + data.debug_code + ')', 'success');
+        } else {
+          showToast('Код отправлен!', 'success');
+        }
         btn.textContent = 'Отправить снова';
         
         // Allow resend after 30 seconds

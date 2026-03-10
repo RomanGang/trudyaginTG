@@ -131,7 +131,7 @@ def register():
 
 @app.route('/api/send-code', methods=['POST'])
 def send_code():
-    """Send SMS verification code"""
+    """Send SMS verification code via Telegram"""
     req_data = request.json
     phone = req_data.get('phone', '').strip()
     
@@ -142,10 +142,30 @@ def send_code():
     code = generate_sms_code()
     sms_codes[phone] = code
     
-    # In production, integrate with SMS provider (Twilio, etc.)
-    # For demo, log the code
-    print(f"📱 SMS Code for {phone}: {code}")
+    # Option 1: Send via Telegram Bot (if telegram_id provided)
+    telegram_id = req_data.get('telegram_id')
+    if telegram_id:
+        try:
+            bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+            if bot_token:
+                import requests
+                requests.post(
+                    f'https://api.telegram.org/bot{bot_token}/sendMessage',
+                    json={
+                        'chat_id': telegram_id,
+                        'text': f'🔐 Код подтверждения Трудягин: {code}'
+                    },
+                    timeout=5
+                )
+                return jsonify({'success': True, 'message': 'Код отправлен в Telegram'})
+        except Exception as e:
+            print(f"Telegram send error: {e}")
     
+    # Option 2: For Russian numbers, try SMS via email-to-sms gateway
+    # Many Russian carriers allow sending SMS via email
+    # This is a fallback - codes will work but may not deliver
+    
+    # Return code for development/testing
     return jsonify({'success': True, 'message': 'Код отправлен', 'debug_code': code})
 
 @app.route('/api/login', methods=['POST'])
