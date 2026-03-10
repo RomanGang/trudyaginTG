@@ -2083,11 +2083,18 @@
       // Update UI - remove selected from all
       document.querySelectorAll('.role-card').forEach(card => {
         card.classList.remove('selected');
+        card.style.borderColor = 'transparent';
+        card.style.background = '';
       });
       
       // Add selected to clicked card
       const cardId = role === 'worker' ? 'roleWorker' : 'roleEmployer';
-      document.getElementById(cardId)?.classList.add('selected');
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.classList.add('selected');
+        card.style.borderColor = '#2563EB';
+        card.style.background = '#EFF6FF';
+      }
       
       console.log('selectedRole is now:', selectedRole);
     }
