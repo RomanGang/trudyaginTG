@@ -1145,63 +1145,82 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Registration Page -->
-    <div class="page" id="page-register">
-      <div class="role-selection fade-in">
-        <h1 class="role-title">Добро пожаловать!</h1>
-        <p class="role-subtitle">Выберите, кто вы</p>
+    <!-- Auth Page -->
+    <div class="page" id="page-auth">
+      <div class="role-selection fade-in" style="padding: 40px 20px;">
+        <div class="logo-section" style="justify-content: center; margin-bottom: 40px;">
+          <div class="logo-icon" style="width: 64px; height: 64px; font-size: 32px;">Т</div>
+        </div>
         
-        <div class="role-cards">
-          <div class="role-card worker" onclick="selectRole('worker')">
-            <div class="role-icon">👷</div>
-            <div class="role-info">
-              <h3>Исполнитель</h3>
-              <p>Хочу найти работу</p>
+        <h1 class="role-title" style="text-align: center; margin-bottom: 8px;">Трудягин</h1>
+        <p class="role-subtitle" style="text-align: center; margin-bottom: 32px;">Находите работу рядом</p>
+        
+        <!-- Login Form -->
+        <div id="loginForm">
+          <h3 style="text-align: center; margin-bottom: 24px; font-size: 20px;">Вход</h3>
+          <div class="form-section">
+            <input type="tel" class="input" id="loginPhone" placeholder="+7 999 123-45-67" style="margin-bottom: 12px;">
+            <input type="password" class="input" id="loginPassword" placeholder="Пароль" style="margin-bottom: 16px;">
+            <button class="btn btn-primary btn-full" onclick="doLogin()" style="margin-bottom: 24px;">Войти</button>
+          </div>
+          <p style="text-align: center; color: var(--text-secondary); font-size: 14px;">
+            Нет аккаунта? <a href="#" onclick="showRegister()" style="color: var(--primary);">Зарегистрироваться</a>
+          </p>
+        </div>
+        
+        <!-- Register Form -->
+        <div id="registerForm" style="display: none;">
+          <h3 style="text-align: center; margin-bottom: 24px; font-size: 20px;">Регистрация</h3>
+          
+          <div class="role-cards" style="margin-bottom: 24px;">
+            <div class="role-card worker" onclick="selectRole('worker')" id="roleWorker">
+              <div class="role-icon">👷</div>
+              <div class="role-info">
+                <h3>Исполнитель</h3>
+                <p>Хочу найти работу</p>
+              </div>
+            </div>
+            <div class="role-card employer" onclick="selectRole('employer')" id="roleEmployer">
+              <div class="role-icon">🏢</div>
+              <div class="role-info">
+                <h3>Работодатель</h3>
+                <p>Хочу найти работников</p>
+              </div>
             </div>
           </div>
           
-          <div class="role-card employer" onclick="selectRole('employer')">
-            <div class="role-icon">🏢</div>
-            <div class="role-info">
-              <h3>Работодатель</h3>
-              <p>Хочу найти работников</p>
-            </div>
+          <div class="form-section">
+            <input type="text" class="input" id="regName" placeholder="Ваше имя" style="margin-bottom: 12px;">
+            <input type="tel" class="input" id="regPhone" placeholder="+7 999 123-45-67" style="margin-bottom: 12px;">
+            <input type="password" class="input" id="regPassword" placeholder="Придумайте пароль" style="margin-bottom: 12px;">
+            <input type="password" class="input" id="regPassword2" placeholder="Повторите пароль" style="margin-bottom: 12px;">
+            
+            <select class="input" id="regCity" style="margin-bottom: 12px;" onchange="updateRegDistricts()">
+              <option value="">Выберите город</option>
+              <option value="Москва">Москва</option>
+              <option value="Санкт-Петербург">Санкт-Петербург</option>
+              <option value="Казань">Казань</option>
+              <option value="Екатеринбург">Екатеринбург</option>
+              <option value="Новосибирск">Новосибирск</option>
+              <option value="Ростов-на-Дону">Ростов-на-Дону</option>
+            </select>
+            
+            <select class="input" id="regDistrict" style="margin-bottom: 16px;">
+              <option value="">Район (необязательно)</option>
+            </select>
+            
+            <button class="btn btn-primary btn-full" onclick="doRegister()" style="margin-bottom: 16px;">Зарегистрироваться</button>
           </div>
+          
+          <p style="text-align: center; color: var(--text-secondary); font-size: 14px;">
+            Уже есть аккаунт? <a href="#" onclick="showLogin()" style="color: var(--primary);">Войти</a>
+          </p>
         </div>
       </div>
-
-      <form class="registration-form hidden" id="regForm" onsubmit="submitRegistration(event)">
-        <div class="form-section">
-          <div class="input-group">
-            <label class="input-label">Ваше имя</label>
-            <input type="text" class="input" id="regName" placeholder="Иван Иванов" required>
-          </div>
-          
-          <div class="form-row">
-            <div class="input-group">
-              <label class="input-label">Город</label>
-              <select class="input" id="regCity" required>
-                <option value="">Выберите город</option>
-                <option value="Москва">Москва</option>
-                <option value="Санкт-Петербург">Санкт-Петербург</option>
-                <option value="Казань">Казань</option>
-                <option value="Екатеринбург">Екатеринбург</option>
-                <option value="Новосибирск">Новосибирск</option>
-                <option value="Ростов-на-Дону">Ростов-на-Дону</option>
-              </select>
-            </div>
-          </div>
-          
-          <div class="input-group">
-            <label class="input-label">Район (необязательно)</label>
-            <select class="input" id="regDistrict">
-              <option value="">Любой район</option>
-            </select>
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-full">Продолжить</button>
-      </form>
     </div>
+
+    <!-- Registration Page (old, keeping for compatibility) -->
+    <div class="page" id="page-register" style="display: none;">
 
     <!-- Home Page -->
     <div class="page" id="page-home">
@@ -1635,10 +1654,27 @@
     };
 
     // ==================== API ====================
-    async function apiCall(endpoint, options = {}) {
+    async function apiCall(endpoint, methodOrOptions = 'GET', body = null) {
       try {
+        // Handle both old and new calling styles
+        let method = 'GET';
+        let options = {};
+        
+        if (typeof methodOrOptions === 'string') {
+          method = methodOrOptions;
+          if (body) {
+            options.body = JSON.stringify(body);
+          }
+        } else if (typeof methodOrOptions === 'object') {
+          options = methodOrOptions;
+          if (options.body && typeof options.body === 'object') {
+            options.body = JSON.stringify(options.body);
+          }
+        }
+        
         const response = await fetch(API_BASE + endpoint, {
           ...options,
+          method: method,
           headers: {
             'Content-Type': 'application/json',
             ...options.headers
@@ -1678,17 +1714,27 @@
 
     // ==================== NAVIGATION ====================
     function navigateTo(page) {
-      // Save user first time
-      if (!currentUser && page !== 'register') {
+      // Load user first
+      if (!currentUser) {
         loadUser();
       }
       
-      // Show register if no user
-      if (!currentUser && page !== 'register') {
-        showPage('register');
+      // Check if user exists for protected pages
+      const protectedPages = ['home', 'jobs', 'create-job', 'my-jobs', 'profile'];
+      
+      if (!currentUser && protectedPages.includes(page)) {
+        // Show auth page instead
+        showPage('auth');
         return;
       }
 
+      // If logged in, redirect to home if trying to access auth
+      if (currentUser && page === 'auth') {
+        showPage('home');
+        updateStats();
+        return;
+      }
+      
       showPage(page);
       
       // Load data for specific pages
@@ -1731,22 +1777,109 @@
       }
     }
 
-    // ==================== REGISTRATION ====================
+    // ==================== AUTH ====================
+    function showLogin() {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('registerForm').style.display = 'none';
+    }
+    
+    function showRegister() {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+    }
+    
+    function updateRegDistricts() {
+      const city = document.getElementById('regCity').value;
+      const districtSelect = document.getElementById('regDistrict');
+      const dists = districts[city] || [];
+      
+      districtSelect.innerHTML = '<option value="">Район (необязательно)</option>' + 
+        dists.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+    
+    function doLogin() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      
+      if (!phone || !password) {
+        showToast('Введите телефон и пароль', 'error');
+        return;
+      }
+      
+      showToast('Вход...', 'loading');
+      
+      apiCall('/login', 'POST', {
+        phone: phone,
+        password: password
+      }).then(data => {
+        currentUser = data.user;
+        saveUser();
+        showToast('Добро пожаловать, ' + data.user.name + '!', 'success');
+        navigateTo('home');
+      }).catch(err => {
+        const msg = err.message || 'Ошибка входа';
+        showToast(msg, 'error');
+      });
+    }
+    
+    function doRegister() {
+      const name = document.getElementById('regName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const password2 = document.getElementById('regPassword2').value;
+      const city = document.getElementById('regCity').value;
+      const district = document.getElementById('regDistrict').value;
+      
+      if (!name || !phone || !password) {
+        showToast('Заполните все поля', 'error');
+        return;
+      }
+      
+      if (password !== password2) {
+        showToast('Пароли не совпадают', 'error');
+        return;
+      }
+      
+      if (password.length < 4) {
+        showToast('Пароль должен быть минимум 4 символа', 'error');
+        return;
+      }
+      
+      if (!selectedRole) {
+        showToast('Выберите роль', 'error');
+        return;
+      }
+      
+      showToast('Регистрация...', 'loading');
+      
+      apiCall('/register', 'POST', {
+        name: name,
+        phone: phone,
+        password: password,
+        role: selectedRole,
+        city: city,
+        district: district
+      }).then(data => {
+        currentUser = data.user;
+        saveUser();
+        showToast('Добро пожаловать, ' + data.user.name + '!', 'success');
+        navigateTo('home');
+      }).catch(err => {
+        const msg = err.message || 'Ошибка регистрации';
+        showToast(msg, 'error');
+      });
+    }
+    
     function selectRole(role) {
       selectedRole = role;
       
       // Update UI
-      document.querySelectorAll('.role-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      document.querySelector('.role-card.' + role).classList.add('selected');
-      
-      // Show form after delay
-      setTimeout(() => {
-        document.getElementById('regForm').classList.remove('hidden');
-        document.getElementById('regForm').classList.add('fade-in');
-      }, 200);
+      document.getElementById('roleWorker')?.classList.remove('selected');
+      document.getElementById('roleEmployer')?.classList.remove('selected');
+      document.getElementById('role' + role.charAt(0).toUpperCase() + role.slice(1))?.classList.add('selected');
     }
+
+    // ==================== REGISTRATION (old) ====================
 
     function submitRegistration(e) {
       e.preventDefault();
@@ -2590,7 +2723,7 @@
       if (currentUser) {
         navigateTo('home');
       } else {
-        showPage('register');
+        showPage('auth');
       }
       
       // Set minimum date for job

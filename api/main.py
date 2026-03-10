@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 
@@ -7,6 +8,10 @@ app = Flask(__name__, static_folder='frontend')
 
 # File-based storage - persists during session on most platforms
 DATA_FILE = '/tmp/trudyagin_data.json'
+
+def hash_password(password):
+    """Hash password using SHA256"""
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def load_data():
     """Load data from JSON file"""
@@ -46,20 +51,23 @@ def register():
     global data, next_ids
     req_data = request.json
     
-    telegram_id = str(req_data.get('telegram_id', ''))
+    phone = req_data.get('phone', '').strip()
+    password = req_data.get('password', '')
     name = req_data.get('name', '')
     role = req_data.get('role', 'worker')
     city = req_data.get('city', '')
     district = req_data.get('district', '')
-    phone = req_data.get('phone', '')
     
-    if not telegram_id or not name:
-        return jsonify({'error': 'Missing required fields'}), 400
+    if not phone or not password:
+        return jsonify({'error': 'Введите номер телефона и пароль'}), 400
     
-    # Check if user exists
+    if not name:
+        return jsonify({'error': 'Введите ваше имя'}), 400
+    
+    # Check if phone already registered
     for uid, user in data['users'].items():
-        if user.get('telegram_id') == telegram_id:
-            return jsonify({'success': True, 'user': user})
+        if user.get('phone') == phone:
+            return jsonify({'error': 'Этот номер телефона уже зарегистрирован'}), 400
     
     # Create new user
     user_id = str(next_ids['user'])
@@ -67,9 +75,9 @@ def register():
     
     user = {
         'id': user_id,
-        'telegram_id': telegram_id,
-        'name': name,
         'phone': phone,
+        'password': hash_password(password),
+        'name': name,
         'role': role,
         'city': city,
         'district': district,
@@ -81,7 +89,57 @@ def register():
     data['users'][user_id] = user
     save_data(data)
     
-    return jsonify({'success': True, 'user': user})
+    # Return user without password
+    user_data = {k: v for k, v in user.items() if k != 'password'}
+    return jsonify({'success': True, 'user': user_data})
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    global data
+    req_data = request.json
+    
+    phone = req_data.get('phone', '').strip()
+    password = req_data.get('password', '')
+    
+    if not phone or not password:
+        return jsonify({'error': 'Введите номер телефона и пароль'}), 400
+    
+    # Find user by phone
+    for uid, user in data['users'].items():
+        if user.get('phone') == phone:
+            if user.get('password') == hash_password(password):
+                # Return user without password
+                user_data = {k: v for k, v in user.items() if k != 'password'}
+                return jsonify({'success': True, 'user': user_data})
+            else:
+                return jsonify({'error': 'Неверный пароль'}), 401
+    
+    return jsonify({'error': 'Пользователь с таким номером не найден'}), 404
+
+@app.route('/api/update-profile', methods=['POST'])
+def update_profile():
+    global data
+    req_data = request.json
+    
+    user_id = str(req_data.get('id'))
+    user = data['users'].get(user_id)
+    
+    if not user:
+        return jsonify({'error': 'Пользователь не найден'}), 404
+    
+    # Update allowed fields
+    if 'name' in req_data:
+        user['name'] = req_data['name']
+    if 'city' in req_data:
+        user['city'] = req_data['city']
+    if 'district' in req_data:
+        user['district'] = req_data['district']
+    
+    data['users'][user_id] = user
+    save_data(data)
+    
+    user_data = {k: v for k, v in user.items() if k != 'password'}
+    return jsonify({'success': True, 'user': user_data})
 
 @app.route('/api/user/<telegram_id>')
 def get_user(telegram_id):
