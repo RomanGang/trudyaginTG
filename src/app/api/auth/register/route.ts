@@ -1,92 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod';
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-const registerSchema = z.object({
-  name: z.string().min(2),
-  phone: z.string().min(10),
-  code: z.string().length(4),
-  password: z.string().min(4),
-  role: z.enum(['worker', 'employer']),
-  city: z.string().min(1),
-  district: z.string().optional(),
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const data = registerSchema.parse(body);
+    const { name, phone, code, password, role, city, district } = await request.json();
+
+    if (!name || !phone || !password || !role || !city) {
+      return NextResponse.json({ success: false, message: 'Заполните все поля' });
+    }
 
     // Verify SMS code
-    const smsCode = await prisma.smsCode.findFirst({
-      where: {
-        phone: data.phone,
-        code: data.code,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    if (!smsCode) {
-      return NextResponse.json(
-        { success: false, message: 'Неверный или истёкший код' },
-        { status: 400 }
-      );
+    const isValid = db.verifySmsCode(phone, code);
+    if (!isValid) {
+      return NextResponse.json({ success: false, message: 'Неверный или истёкший код' });
     }
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { phone: data.phone },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, message: 'Пользователь уже существует' },
-        { status: 400 }
-      );
+    const existing = db.getUserByPhone(phone);
+    if (existing) {
+      return NextResponse.json({ success: false, message: 'Пользователь уже существует' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        phone: data.phone,
-        password: hashedPassword,
-        name: data.name,
-        role: data.role,
-        city: data.city,
-        district: data.district,
-      },
-    });
+    const user = db.createUser({ phone, password, name, role, city, district: district || '' });
 
-    // Mark code as used
-    await prisma.smsCode.update({
-      where: { id: smsCode.id },
-      data: { used: true },
-    });
+    db.markCodeUsed(phone);
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        role: user.role,
-        city: user.city,
-        district: user.district,
-        rating: user.rating,
-        jobsDone: user.jobsDone,
-        createdAt: user.createdAt,
-      },
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Регистрация успешна',
+      user: { id: user.id, name: user.name, phone: user.phone, role: user.role, city: user.city, district: user.district, rating: user.rating, jobsDone: user.jobsDone }
     });
   } catch (error) {
-    console.error('register error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Ошибка регистрации' },
-      { status: 400 }
-    );
+    console.error('Error:', error);
+    return NextResponse.json({ success: false, message: 'Ошибка регистрации' });
   }
 }

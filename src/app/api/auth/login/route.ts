@@ -1,59 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod';
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-const loginSchema = z.object({
-  phone: z.string().min(10),
-  password: z.string().min(1),
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { phone, password } = loginSchema.parse(body);
+    const { phone, password } = await request.json();
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { phone },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: 'Пользователь не найден' },
-        { status: 401 }
-      );
+    if (!phone || !password) {
+      return NextResponse.json({ success: false, message: 'Введите телефон и пароль' });
     }
 
-    // Verify password
-    const isValid = await bcrypt.compare(password, user.password);
-
-    if (!isValid) {
-      return NextResponse.json(
-        { success: false, message: 'Неверный пароль' },
-        { status: 401 }
-      );
+    const user = db.getUserByPhone(phone);
+    if (!user || user.password !== password) {
+      return NextResponse.json({ success: false, message: 'Неверный телефон или пароль' });
     }
 
-    return NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        role: user.role,
-        city: user.city,
-        district: user.district,
-        rating: user.rating,
-        jobsDone: user.jobsDone,
-        createdAt: user.createdAt,
-      },
+    return NextResponse.json({ 
+      success: true, 
+      user: { id: user.id, name: user.name, phone: user.phone, role: user.role, city: user.city, district: user.district, rating: user.rating, jobsDone: user.jobsDone }
     });
   } catch (error) {
-    console.error('login error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Ошибка входа' },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, message: 'Ошибка входа' });
   }
 }

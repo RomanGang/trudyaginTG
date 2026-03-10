@@ -1,48 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { generateSmsCode } from '@/lib/utils';
-import { z } from 'zod';
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-const sendCodeSchema = z.object({
-  phone: z.string().min(10),
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { phone } = sendCodeSchema.parse(body);
-
-    // Generate code
-    const code = generateSmsCode();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-    // Delete old codes for this phone
-    await prisma.smsCode.deleteMany({
-      where: { phone },
-    });
-
-    // Create new code
-    await prisma.smsCode.create({
-      data: {
-        phone,
-        code,
-        expiresAt,
-      },
-    });
-
-    // In development, return the code
-    const isDev = process.env.NODE_ENV !== 'production';
+    const { phone } = await request.json();
     
-    return NextResponse.json({
-      success: true,
-      message: isDev ? `Код: ${code}` : 'Код отправлен',
-      debug_code: isDev ? code : undefined,
+    if (!phone) {
+      return NextResponse.json({ success: false, message: 'Введите номер телефона' });
+    }
+
+    // Generate a 4-digit code
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    
+    // Store the code
+    db.createSmsCode(phone, code);
+    
+    // In production, send SMS here
+    console.log(`SMS code for ${phone}: ${code}`);
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Код отправлен',
+      debug_code: code // For development
     });
   } catch (error) {
-    console.error('send-code error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Ошибка отправки кода' },
-      { status: 400 }
-    );
+    console.error('Error:', error);
+    return NextResponse.json({ success: false, message: 'Ошибка отправки кода' });
   }
 }

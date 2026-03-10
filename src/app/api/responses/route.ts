@@ -1,42 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { z } from 'zod';
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
-const respondSchema = z.object({
-  jobId: z.string(),
-  workerId: z.string(),
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const { jobId, workerId } = respondSchema.parse(body);
-
-    // Check if already responded
-    const existing = await prisma.response.findFirst({
-      where: { jobId, workerId },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { success: false, message: 'Вы уже откликались' },
-        { status: 400 }
-      );
+    const { jobId, workerId } = await request.json();
+    
+    if (!jobId || !workerId) {
+      return NextResponse.json({ success: false, message: 'Ошибка' });
     }
-
-    const response = await prisma.response.create({
-      data: {
-        jobId,
-        workerId,
-      },
-    });
-
+    
+    const existing = db.getResponses(jobId).find(r => r.workerId === workerId);
+    if (existing) {
+      return NextResponse.json({ success: false, message: 'Вы уже откликались' });
+    }
+    
+    const response = db.createResponse({ jobId, workerId });
     return NextResponse.json({ success: true, response });
   } catch (error) {
-    console.error('respond error:', error);
-    return NextResponse.json(
-      { success: false, message: 'Ошибка отклика' },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, message: 'Ошибка отклика' });
   }
 }
