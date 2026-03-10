@@ -168,12 +168,13 @@ if (usePostgres) {
     if (err) {
       console.error('Error opening database:', err.message);
     } else {
-      console.log('Connected to SQLite database');
+      console.log('Connected to SQLite database at:', dbPath);
       initializeTables();
     }
   });
   
   function initializeTables() {
+    console.log('Initializing tables...');
     db.run(`CREATE TABLE IF NOT EXISTS users (
       telegram_id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
