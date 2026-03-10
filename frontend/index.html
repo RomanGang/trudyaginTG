@@ -943,6 +943,200 @@
     .mt-4 { margin-top: 16px; }
     .mb-4 { margin-bottom: 16px; }
     .hidden { display: none !important; }
+
+    /* ==================== SEARCH ==================== */
+    .search-container {
+      padding: 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      background: var(--bg);
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: var(--surface);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    /* ==================== CHECKBOX ==================== */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .checkbox-item:active {
+      transform: scale(0.99);
+    }
+
+    .checkbox-item input {
+      display: none;
+    }
+
+    .checkbox-custom {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .checkbox-item input:checked + .checkbox-custom {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .checkbox-custom svg {
+      opacity: 0;
+      color: white;
+      transition: all 0.2s;
+    }
+
+    .checkbox-item input:checked + .checkbox-custom svg {
+      opacity: 1;
+    }
+
+    .checkbox-label {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .checkbox-label span {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* ==================== REVIEWS ==================== */
+    .reviews-section {
+      padding: 16px;
+    }
+
+    .review-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .review-avatar {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .review-info {
+      flex: 1;
+    }
+
+    .review-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .review-date {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .review-rating {
+      display: flex;
+      gap: 2px;
+    }
+
+    .review-rating svg {
+      width: 16px;
+      height: 16px;
+      color: #FFD700;
+    }
+
+    .review-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ==================== PROFILE EDIT ==================== */
+    .profile-actions {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .profile-actions .btn {
+      flex: 1;
+    }
+
+    /* ==================== REQUIREMENT BADGES ==================== */
+    .requirement-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .requirement-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #DCFCE7;
+      color: #166534;
+    }
   </style>
 </head>
 <body>
@@ -1016,6 +1210,14 @@
           <div class="logo-section">
             <div class="logo-icon">Т</div>
             <span class="logo-text">Трудягин</span>
+          </div>
+          <div class="header-actions">
+            <button class="icon-btn" onclick="navigateTo('profile')">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </button>
           </div>
         </div>
       </header>
@@ -1105,8 +1307,25 @@
       <header class="header">
         <div class="header-content">
           <h2 style="font-size: 20px; font-weight: 700;">Заказы</h2>
+          <button class="icon-btn" onclick="navigateTo('profile')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
         </div>
       </header>
+
+      <!-- Search -->
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input type="text" class="search-input" id="jobSearch" placeholder="Поиск заказов..." oninput="searchJobs()">
+        </div>
+      </div>
 
       <div class="quick-filters">
         <button class="quick-filter active" data-filter="all">Все</button>
@@ -1168,7 +1387,12 @@
             </svg>
           </button>
           <h2 style="font-size: 18px; font-weight: 600;">Создать заказ</h2>
-          <div style="width: 40px;"></div>
+          <button class="icon-btn" onclick="navigateTo('profile')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -1232,6 +1456,47 @@
             </div>
           </div>
 
+          <!-- Requirements -->
+          <label class="input-label">Требования к исполнителю</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="reqRF">
+              <div class="checkbox-custom">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="checkbox-label">
+                🇷🇺 Только граждане РФ
+                <span>Подтверждение паспортом</span>
+              </div>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="reqNoCriminal">
+              <div class="checkbox-custom">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="checkbox-label">
+                ✅ Без судимостей
+                <span>Справка об отсутствии судимости</span>
+              </div>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="reqSelfEmployed">
+              <div class="checkbox-custom">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="checkbox-label">
+                📋 Только самозанятые
+                <span>Честный самозанятый (НПД)</span>
+              </div>
+            </label>
+          </div>
+
           <button type="submit" class="btn btn-primary btn-full mt-4">Опубликовать</button>
         </form>
       </div>
@@ -1242,6 +1507,12 @@
       <header class="header">
         <div class="header-content">
           <h2 style="font-size: 20px; font-weight: 700;">Мои заказы</h2>
+          <button class="icon-btn" onclick="navigateTo('profile')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -1282,6 +1553,55 @@
           <span>Создать</span>
         </button>
         <button class="nav-item active" onclick="navigateTo('my-jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>Мои</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Profile Page -->
+    <div class="page" id="page-profile">
+      <header class="header">
+        <div class="header-content">
+          <h2 style="font-size: 20px; font-weight: 700;">Профиль</h2>
+          <button class="icon-btn" onclick="navigateTo('home')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div id="profileContent"></div>
+      </div>
+
+      <nav class="bottom-nav">
+        <button class="nav-item" onclick="navigateTo('home')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          </svg>
+          <span>Главная</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Заказы</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('create-job')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <span>Создать</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('my-jobs')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -1357,6 +1677,8 @@
         loadMyJobs();
       } else if (page === 'home') {
         updateStats();
+      } else if (page === 'profile') {
+        loadProfile();
       }
     }
 
@@ -1370,12 +1692,12 @@
         targetPage.classList.add('active');
       }
       
-      // Update nav
+      // Update nav - remove active from all nav items
       document.querySelectorAll('.nav-item').forEach(btn => {
         btn.classList.remove('active');
       });
       
-      // Mark active nav item
+      // Mark active nav item (only for bottom nav items)
       const pageToNav = {
         'home': 0,
         'jobs': 1,
@@ -1456,11 +1778,24 @@
     });
 
     // ==================== JOBS ====================
+    let searchQuery = '';
+
     function loadJobs() {
       const container = document.getElementById('jobsList');
       
       // Filter jobs
       let filteredJobs = [...sampleJobs];
+      
+      // Apply search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredJobs = filteredJobs.filter(j => 
+          j.title.toLowerCase().includes(query) || 
+          j.desc.toLowerCase().includes(query) ||
+          j.category.toLowerCase().includes(query) ||
+          j.city.toLowerCase().includes(query)
+        );
+      }
       
       // Apply quick filter
       if (currentFilter !== 'all') {
@@ -1590,6 +1925,11 @@
         return;
       }
       
+      // Get requirements
+      const reqRF = document.getElementById('reqRF').checked;
+      const reqNoCriminal = document.getElementById('reqNoCriminal').checked;
+      const reqSelfEmployed = document.getElementById('reqSelfEmployed').checked;
+      
       const job = {
         id: Date.now(),
         title: document.getElementById('jobTitle').value,
@@ -1600,7 +1940,12 @@
         city: document.getElementById('jobCity').value,
         date: document.getElementById('jobDate').value,
         employer: currentUser.name,
-        employer_id: currentUser.telegram_id
+        employer_id: currentUser.telegram_id,
+        requirements: {
+          rf: reqRF,
+          noCriminal: reqNoCriminal,
+          selfEmployed: reqSelfEmployed
+        }
       };
       
       // Add to jobs
@@ -1686,6 +2031,114 @@
       document.getElementById('statJobs').textContent = sampleJobs.length;
       document.getElementById('statWorkers').textContent = '120+';
       document.getElementById('statDone').textContent = '89';
+    }
+
+    // ==================== SEARCH ====================
+    function searchJobs() {
+      searchQuery = document.getElementById('jobSearch').value;
+      loadJobs();
+    }
+
+    // ==================== PROFILE ====================
+    const sampleReviews = [
+      { id: 1, name: 'Александр', rating: 5, text: 'Отличный исполнитель! Всё сделал быстро и качественно. Рекомендую!', date: '2026-03-08' },
+      { id: 2, name: 'Мария', rating: 5, text: 'Очень довольна работой. Вежливый, аккуратный, всё как договаривались.', date: '2026-03-05' },
+      { id: 3, name: 'Дмитрий', rating: 4, text: 'Хорошая работа, немного задержался по времени, но результат отличный.', date: '2026-03-01' },
+    ];
+
+    function loadProfile() {
+      const container = document.getElementById('profileContent');
+      
+      if (!currentUser) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <h3 class="empty-title">Войдите в аккаунт</h3>
+            <p class="empty-desc">Зарегистрируйтесь, чтобы видеть профиль</p>
+            <button class="btn btn-primary mt-4" onclick="navigateTo('register')">Регистрация</button>
+          </div>
+        `;
+        return;
+      }
+
+      const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+      const roleText = currentUser.role === 'worker' ? 'Исполнитель' : 'Работодатель';
+
+      container.innerHTML = `
+        <div class="profile-header">
+          <div class="profile-avatar">${initials}</div>
+          <div class="profile-name">${currentUser.name}</div>
+          <div class="profile-role">${roleText}</div>
+          <div class="profile-stats">
+            <div class="profile-stat">
+              <div class="profile-stat-value">${sampleReviews.length}</div>
+              <div class="profile-stat-label">Отзывов</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value">4.8</div>
+              <div class="profile-stat-label">Рейтинг</div>
+            </div>
+            <div class="profile-stat">
+              <div class="profile-stat-value">${currentUser.role === 'worker' ? '12' : '5'}</div>
+              <div class="profile-stat-label">${currentUser.role === 'worker' ? 'Выполнено' : 'Создано'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <button class="btn btn-secondary" onclick="editProfile()">✏️ Редактировать</button>
+          <button class="btn btn-secondary" onclick="logout()">🚪 Выйти</button>
+        </div>
+
+        <div class="about-section">
+          <h2>Информация</h2>
+          <div class="feature-list">
+            <div class="feature-item">
+              <div class="feature-icon blue">📍</div>
+              <div class="feature-text">${currentUser.city}${currentUser.district ? ', ' + currentUser.district : ''}</div>
+            </div>
+            <div class="feature-item">
+              <div class="feature-icon green">📅</div>
+              <div class="feature-text">На платформе с марта 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reviews-section">
+          <h2 style="font-size: 17px; font-weight: 600; margin-bottom: 16px; padding: 0 16px;">Отзывы</h2>
+          ${sampleReviews.map(review => `
+            <div class="review-card">
+              <div class="review-header">
+                <div class="review-avatar">${review.name[0]}</div>
+                <div class="review-info">
+                  <div class="review-name">${review.name}</div>
+                  <div class="review-date">${formatDate(review.date)}</div>
+                </div>
+                <div class="review-rating">
+                  ${[1,2,3,4,5].map(i => `<svg viewBox="0 0 24 24" fill="${i <= review.rating ? '#FFD700' : '#E2E8F0'}" stroke="${i <= review.rating ? '#FFD700' : '#E2E8F0'}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`).join('')}
+                </div>
+              </div>
+              <div class="review-text">${review.text}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function editProfile() {
+      showToast('Редактирование профиля скоро будет доступно!', 'success');
+    }
+
+    function logout() {
+      localStorage.removeItem('trudyagin_user');
+      currentUser = null;
+      navigateTo('register');
+      showToast('Вы вышли из аккаунта', 'success');
     }
 
     // ==================== LOCAL STORAGE ====================
