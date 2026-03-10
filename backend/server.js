@@ -2,6 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const morgan = require('morgan');
+
+// Import middleware
+const { apiLimiter, authLimiter, createJobLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const usersRouter = require('./routes/users');
@@ -12,6 +17,25 @@ const messagesRouter = require('./routes/messages');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://telegram.org"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.telegram.org"],
+      frameSrc: ["'none'"]
+    }
+  }
+}));
+
+// Request logging
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('combined'));
+}
 
 // CORS - allow specific origins
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -36,6 +60,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Apply rate limiting to all API routes
+app.use('/api', apiLimiter);
 
 // API Routes - MUST come before static files
 app.use('/api', usersRouter);

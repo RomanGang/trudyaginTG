@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Платформа для поиска и выполнения локальных заказов в Telegram",
   "main": "backend/server.js",
+  "type": "module",
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
@@ -20,7 +21,11 @@
     "pg": "^8.11.0",
     "sqlite3": "^5.1.7",
     "bcrypt": "^5.1.1",
-    "dotenv": "^16.4.1"
+    "dotenv": "^16.4.1",
+    "joi": "^17.12.0",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
