@@ -4,18 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Трудягин — работа и исполнители рядом</title>
-  <!-- Telegram WebApp will be loaded after page load -->
-  <script>
-    // Defer Telegram script loading
-    window.telegramLoaded = false;
-    window.addEventListener('load', function() {
-      var script = document.createElement('script');
-      script.src = 'https://telegram.org/js/telegram-web-app.js';
-      script.onload = function() { window.telegramLoaded = true; };
-      script.onerror = function() { console.error('Failed to load Telegram WebApp'); };
-      document.head.appendChild(script);
-    });
-  </script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     /* ==================== VARIABLES ==================== */
     :root {
@@ -1727,19 +1716,32 @@
     let telegramUser = null;
     let tg = null;
 
-    // Initialize Telegram only if available
-    if (window.Telegram && window.Telegram.WebApp) {
-      tg = window.Telegram.WebApp;
-      tg.expand();
-      tg.ready();
+    // Initialize Telegram after script loads
+    function initTelegram() {
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          tg = window.Telegram.WebApp;
+          tg.expand();
+          tg.ready();
 
-      // Get user from Telegram
-      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        telegramUser = tg.initDataUnsafe.user;
-        console.log('Telegram user:', telegramUser);
+          // Get user from Telegram
+          if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            telegramUser = tg.initDataUnsafe.user;
+            console.log('Telegram user:', telegramUser);
+          }
+        } else {
+          console.log('Not running in Telegram');
+        }
+      } catch(e) {
+        console.log('Telegram init error:', e);
       }
+    }
+    
+    // Initialize immediately or after DOM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTelegram);
     } else {
-      console.log('Not running in Telegram');
+      initTelegram();
     }
 
     // ==================== NAVIGATION ====================
