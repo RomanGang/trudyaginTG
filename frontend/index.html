@@ -1757,22 +1757,26 @@
 
     // ==================== NAVIGATION ====================
     function navigateTo(page) {
+      console.log('Navigating to:', page, 'currentUser:', currentUser ? 'exists' : 'null');
+      
       // Load user first
       if (!currentUser) {
         loadUser();
+        console.log('After loadUser:', currentUser ? 'exists' : 'null');
       }
       
       // Check if user exists for protected pages
       const protectedPages = ['home', 'jobs', 'create-job', 'my-jobs', 'profile'];
       
       if (!currentUser && protectedPages.includes(page)) {
-        // Show auth page instead
+        console.log('No user, showing auth');
         showPage('auth');
         return;
       }
 
       // If logged in, redirect to home if trying to access auth
       if (currentUser && page === 'auth') {
+        console.log('User exists, going to home');
         showPage('home');
         updateStats();
         return;
@@ -1905,11 +1909,14 @@
         city: city,
         district: district
       }).then(data => {
+        console.log('Registration success:', data);
         currentUser = data.user;
         saveUser();
+        console.log('User saved, navigating to home');
         showToast('Добро пожаловать, ' + data.user.name + '!', 'success');
         navigateTo('home');
       }).catch(err => {
+        console.error('Registration error:', err);
         const msg = err.message || 'Ошибка регистрации';
         showToast(msg, 'error');
       });
@@ -2792,17 +2799,24 @@
 
     // ==================== LOCAL STORAGE ====================
     function saveUser() {
+      console.log('Saving user to localStorage:', currentUser);
       localStorage.setItem('trudyagin_user', JSON.stringify(currentUser));
+      console.log('User saved successfully');
     }
 
     function loadUser() {
+      console.log('Loading user from localStorage...');
       const saved = localStorage.getItem('trudyagin_user');
+      console.log('Raw saved data:', saved);
       if (saved) {
         try {
           currentUser = JSON.parse(saved);
+          console.log('User loaded:', currentUser);
         } catch(e) {
           console.error('Error loading user:', e);
         }
+      } else {
+        console.log('No saved user found');
       }
     }
 
