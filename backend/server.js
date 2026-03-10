@@ -37,10 +37,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// Serve static files from frontend directory
-app.use(express.static(path.join(__dirname, '../frontend')));
-
-// API Routes
+// API Routes - MUST come before static files
 app.use('/api', usersRouter);
 app.use('/api', jobsRouter);
 app.use('/api', responsesRouter);
@@ -51,6 +48,9 @@ app.use('/api', messagesRouter);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Serve static files from frontend directory
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Stats endpoint
 app.get('/api/stats', async (req, res) => {

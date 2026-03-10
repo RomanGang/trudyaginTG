@@ -117,6 +117,24 @@ router.get('/users/:id', async (req, res) => {
   }
 });
 
+// GET /api/users/phone/:phone
+router.get('/users/phone/:phone', async (req, res) => {
+  try {
+    const phone = req.params.phone.replace(/^\+?7/, '');
+    const user = await db.get(
+      'SELECT id, name, phone, role, city, district, skills, rating, jobs_done, created_at FROM users WHERE phone LIKE ?',
+      ['%' + phone]
+    );
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error('Get user by phone error:', error);
+    res.status(500).json({ error: 'Ошибка' });
+  }
+});
+
 // PUT /api/users/:id
 router.put('/users/:id', async (req, res) => {
   try {
