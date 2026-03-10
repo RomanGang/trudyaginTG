@@ -1905,13 +1905,23 @@
     function shareJob(jobId) {
       apiCall('/jobs/' + jobId).then(job => {
         const baseUrl = window.location.origin;
-        const text = `🔍 Нашёл работу в Трудягин!\n\n` +
-          `📌 ${job.title}\n` +
-          `💰 ${formatPayment(job)}\n` +
-          `📍 ${job.city}\n\n` +
-          `Откликнись: ${baseUrl}/?job=${jobId}`;
+        const shareText = `🔍 Нашёл работу в Трудягин!\n\n📌 ${job.title}\n💰 ${formatPayment(job)}\n📍 ${job.city}\n\nОткликнись: ${baseUrl}/?job=${jobId}`;
         
-        tg.shareUrl(text);
+        // Try Telegram share first
+        if (tg.shareUrl) {
+          tg.shareUrl(shareText);
+        } else if (tg.openTelegramLink) {
+          // Fallback: open Telegram with pre-filled message
+          const encodedText = encodeURIComponent(shareText);
+          tg.openTelegramLink(`https://t.me/share/url?url=${baseUrl}/?job=${jobId}&text=${encodedText}`);
+        } else {
+          // Last fallback: copy to clipboard
+          navigator.clipboard.writeText(shareText).then(() => {
+            showToast('Скопировано в буфер обмена!', 'success');
+          }).catch(() => {
+            showToast('Не удалось поделиться', 'error');
+          });
+        }
       }).catch(() => {
         showToast('Не удалось поделиться', 'error');
       });
@@ -2090,6 +2100,8 @@
           const status = job.status || (isEmployer ? 'open' : 'pending');
           const statusText = status === 'open' ? 'Открыт' : status === 'in_progress' ? 'В работе' : 'Завершён';
           const showApplicants = isEmployer && status === 'open';
+          const canRate = status === 'in_progress' || status === 'completed';
+          const hasRated = job.response_status === 'rated';
           
           return `
             <div class="job-card fade-in">
@@ -2106,6 +2118,8 @@
               <div class="job-footer">
                 <span class="job-employer">Статус: ${statusText}</span>
                 ${showApplicants ? `<button class="job-respond-btn" onclick="showApplicants(${job.id})">Отклики (${job.responses_count || 0})</button>` : ''}
+                ${!isEmployer && canRate && !hasRated ? `<button class="job-respond-btn" onclick="showRateModal(${job.id}, ${job.selected_worker_id || job.employer_id})">Оценить</button>` : ''}
+                ${hasRated ? '<span style="color: green; font-size: 12px;">✓ Оценено</span>' : ''}
               </div>
             </div>
           `;
@@ -2129,17 +2143,154 @@
           return;
         }
         
-        let message = '📋 Отклики на ваш заказ:\n\n';
-        responses.forEach((r, i) => {
-          message += `${i + 1}. ${r.name}\n`;
-          message += `   ⭐ Рейтинг: ${r.rating || 0}\n`;
-          message += `   📋 Выполнено: ${r.jobs_done || 0}\n`;
-          if (r.city) message += `   📍 ${r.city}\n`;
-          message += `   /choose_${jobId}_${r.worker_id} - Выбрать\n\n`;
-        });
-        message += 'Нажмите на команду, чтобы выбрать исполнителя';
+        // Show in modal instead of alert
+        showApplicantsModal(jobId, responses);
+      });
+    }
+    
+    function showApplicantsModal(jobId, responses) {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'applicantsModal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Отклики на заказ</h3>
+            <button class="icon-btn" onclick="closeApplicantsModal()">✕</button>
+          </div>
+          <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+            ${responses.map(r => `
+              <div class="applicant-card" style="background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                  <div class="profile-avatar" style="width: 48px; height: 48px; font-size: 20px;">${(r.name || 'U')[0]}</div>
+                  <div>
+                    <div style="font-weight: 600;">${r.name || 'Пользователь'}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                      ⭐ ${r.rating || '0.0'} | Выполнено: ${r.jobs_done || 0}
+                    </div>
+                  </div>
+                </div>
+                ${r.city ? `<div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">📍 ${r.city}${r.district ? ', ' + r.district : ''}</div>` : ''}
+                <button class="btn btn-primary" style="width: 100%;" onclick="selectWorker(${jobId}, ${r.worker_id}, '${r.name || 'Пользователь'}')">Выбрать</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('app').appendChild(modal);
+      setTimeout(() => modal.classList.add('active'), 10);
+    }
+    
+    function closeApplicantsModal() {
+      const modal = document.getElementById('applicantsModal');
+      if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+      }
+    }
+    
+    function selectWorker(jobId, workerId, workerName) {
+      if (!confirm(`Выбрать ${workerName} для этого заказа?`)) return;
+      
+      apiCall('/select-worker', 'POST', {
+        job_id: jobId,
+        worker_id: workerId
+      }).then(() => {
+        closeApplicantsModal();
+        showToast(`${workerName} выбран исполнителем!`, 'success');
+        loadMyJobs();
         
-        tg.showAlert(message);
+        // Notify via bot (if available)
+        notifyWorker(workerId, jobId);
+      }).catch(() => {
+        showToast('Ошибка при выборе', 'error');
+      });
+    }
+    
+    function notifyWorker(workerId, jobId) {
+      // This would send a notification via Telegram bot
+      // For now, just show success
+      console.log('Notifying worker:', workerId, 'for job:', jobId);
+    }
+    
+    // ==================== RATING ====================
+    function showRateModal(jobId, toUserId) {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'rateModal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Оценить работу</h3>
+            <button class="icon-btn" onclick="closeRateModal()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <p>Насколько вы довольны работой?</p>
+              <div id="ratingStars" style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
+                ${[1,2,3,4,5].map(i => `
+                  <svg onclick="setRating(${i})" width="40" height="40" viewBox="0 0 24 24" fill="#E2E8F0" stroke="#FFD700" stroke-width="1" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                `).join('')}
+              </div>
+            </div>
+            <div class="form-section">
+              <label class="input-label">Комментарий (необязательно)</label>
+              <textarea class="input" id="rateComment" placeholder="Напишите отзыв о работе" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeRateModal()">Отмена</button>
+            <button class="btn btn-primary" onclick="submitRating(${jobId}, ${toUserId})">Отправить</button>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('app').appendChild(modal);
+      setTimeout(() => modal.classList.add('active'), 10);
+    }
+    
+    let selectedRating = 5;
+    
+    function setRating(rating) {
+      selectedRating = rating;
+      const stars = document.querySelectorAll('#ratingStars svg');
+      stars.forEach((star, index) => {
+        star.setAttribute('fill', index < rating ? '#FFD700' : '#E2E8F0');
+      });
+    }
+    
+    function closeRateModal() {
+      const modal = document.getElementById('rateModal');
+      if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+      }
+    }
+    
+    function submitRating(jobId, toUserId) {
+      if (!currentUser) {
+        showToast('Ошибка: не авторизован', 'error');
+        return;
+      }
+      
+      const comment = document.getElementById('rateComment').value.trim();
+      
+      apiCall('/rate', 'POST', {
+        from_user: currentUser.id,
+        to_user: toUserId,
+        job_id: jobId,
+        rating: selectedRating,
+        comment: comment
+      }).then(() => {
+        closeRateModal();
+        showToast('Спасибо за отзыв!', 'success');
+        loadMyJobs();
+        loadProfile();
+      }).catch(() => {
+        showToast('Ошибка при отправке отзыва', 'error');
       });
     }
 
@@ -2163,12 +2314,6 @@
     }
 
     // ==================== PROFILE ====================
-    const sampleReviews = [
-      { id: 1, name: 'Александр', rating: 5, text: 'Отличный исполнитель! Всё сделал быстро и качественно. Рекомендую!', date: '2026-03-08' },
-      { id: 2, name: 'Мария', rating: 5, text: 'Очень довольна работой. Вежливый, аккуратный, всё как договаривались.', date: '2026-03-05' },
-      { id: 3, name: 'Дмитрий', rating: 4, text: 'Хорошая работа, немного задержался по времени, но результат отличный.', date: '2026-03-01' },
-    ];
-
     function loadProfile() {
       const container = document.getElementById('profileContent');
       
@@ -2188,10 +2333,10 @@
         `;
         return;
       }
-
+      
       const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
       const roleText = currentUser.role === 'worker' ? 'Исполнитель' : 'Работодатель';
-
+      
       container.innerHTML = `
         <div class="profile-header">
           <div class="profile-avatar">${initials}</div>
@@ -2199,15 +2344,15 @@
           <div class="profile-role">${roleText}</div>
           <div class="profile-stats">
             <div class="profile-stat">
-              <div class="profile-stat-value">${sampleReviews.length}</div>
+              <div class="profile-stat-value" id="profileReviewCount">-</div>
               <div class="profile-stat-label">Отзывов</div>
             </div>
             <div class="profile-stat">
-              <div class="profile-stat-value">4.8</div>
+              <div class="profile-stat-value" id="profileRating">${currentUser.rating || '0.0'}</div>
               <div class="profile-stat-label">Рейтинг</div>
             </div>
             <div class="profile-stat">
-              <div class="profile-stat-value">${currentUser.role === 'worker' ? '12' : '5'}</div>
+              <div class="profile-stat-value">${currentUser.jobs_done || 0}</div>
               <div class="profile-stat-label">${currentUser.role === 'worker' ? 'Выполнено' : 'Создано'}</div>
             </div>
           </div>
@@ -2223,38 +2368,183 @@
           <div class="feature-list">
             <div class="feature-item">
               <div class="feature-icon blue">📍</div>
-              <div class="feature-text">${currentUser.city}${currentUser.district ? ', ' + currentUser.district : ''}</div>
+              <div class="feature-text">${currentUser.city || 'Город не указан'}${currentUser.district ? ', ' + currentUser.district : ''}</div>
             </div>
+            ${currentUser.phone ? `
             <div class="feature-item">
-              <div class="feature-icon green">📅</div>
-              <div class="feature-text">На платформе с марта 2026</div>
+              <div class="feature-icon green">📱</div>
+              <div class="feature-text">${currentUser.phone}</div>
+            </div>
+            ` : ''}
+            <div class="feature-item">
+              <div class="feature-icon purple">📅</div>
+              <div class="feature-text">На платформе с ${formatDate(currentUser.created_at)}</div>
             </div>
           </div>
         </div>
 
-        <div class="reviews-section">
+        <div class="reviews-section" id="profileReviews">
           <h2 style="font-size: 17px; font-weight: 600; margin-bottom: 16px; padding: 0 16px;">Отзывы</h2>
-          ${sampleReviews.map(review => `
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      `;
+      
+      // Load real reviews
+      loadProfileReviews();
+    }
+    
+    function loadProfileReviews() {
+      if (!currentUser || !currentUser.id) return;
+      
+      apiCall('/reviews/' + currentUser.id).then(reviews => {
+        const container = document.getElementById('profileReviews');
+        const reviewCount = document.getElementById('profileReviewCount');
+        
+        if (reviewCount) reviewCount.textContent = reviews.length;
+        
+        if (reviews.length === 0) {
+          container.innerHTML = `
+            <h2 style="font-size: 17px; font-weight: 600; margin-bottom: 16px; padding: 0 16px;">Отзывы</h2>
+            <div class="empty-state" style="padding: 20px;">
+              <p class="empty-desc">Пока нет отзывов</p>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = `
+          <h2 style="font-size: 17px; font-weight: 600; margin-bottom: 16px; padding: 0 16px;">Отзывы (${reviews.length})</h2>
+          ${reviews.map(review => `
             <div class="review-card">
               <div class="review-header">
-                <div class="review-avatar">${review.name[0]}</div>
+                <div class="review-avatar">${(review.from_name || 'U')[0]}</div>
                 <div class="review-info">
-                  <div class="review-name">${review.name}</div>
-                  <div class="review-date">${formatDate(review.date)}</div>
+                  <div class="review-name">${review.from_name || 'Пользователь'}</div>
+                  <div class="review-date">${formatDate(review.created_at)}</div>
                 </div>
                 <div class="review-rating">
                   ${[1,2,3,4,5].map(i => `<svg viewBox="0 0 24 24" fill="${i <= review.rating ? '#FFD700' : '#E2E8F0'}" stroke="${i <= review.rating ? '#FFD700' : '#E2E8F0'}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`).join('')}
                 </div>
               </div>
-              <div class="review-text">${review.text}</div>
+              ${review.comment ? `<div class="review-text">${review.comment}</div>` : ''}
             </div>
           `).join('')}
-        </div>
-      `;
+        `;
+      }).catch(() => {
+        const container = document.getElementById('profileReviews');
+        container.innerHTML = `
+          <h2 style="font-size: 17px; font-weight: 600; margin-bottom: 16px; padding: 0 16px;">Отзывы</h2>
+          <div class="empty-state" style="padding: 20px;">
+            <p class="empty-desc">Не удалось загрузить отзывы</p>
+          </div>
+        `;
+      });
     }
 
     function editProfile() {
-      showToast('Редактирование профиля скоро будет доступно!', 'success');
+      if (!currentUser) {
+        showToast('Сначала войдите в аккаунт', 'error');
+        return;
+      }
+      
+      // Create edit modal
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'editProfileModal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Редактирование профиля</h3>
+            <button class="icon-btn" onclick="closeEditProfile()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-section">
+              <label class="input-label">Имя</label>
+              <input type="text" class="input" id="editName" value="${currentUser.name || ''}" placeholder="Ваше имя">
+            </div>
+            <div class="form-section">
+              <label class="input-label">Телефон</label>
+              <input type="tel" class="input" id="editPhone" value="${currentUser.phone || ''}" placeholder="+7 999 123-45-67">
+            </div>
+            <div class="form-section">
+              <label class="input-label">Город</label>
+              <select class="input" id="editCity" onchange="updateEditDistricts()">
+                <option value="">Выберите город</option>
+                ${Object.keys(cities).map(city => `<option value="${city}" ${currentUser.city === city ? 'selected' : ''}>${city}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-section">
+              <label class="input-label">Район</label>
+              <select class="input" id="editDistrict">
+                <option value="">Выберите район</option>
+                ${(cities[currentUser.city] || []).map(d => `<option value="${d}" ${currentUser.district === d ? 'selected' : ''}>${d}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEditProfile()">Отмена</button>
+            <button class="btn btn-primary" onclick="saveProfile()">Сохранить</button>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('app').appendChild(modal);
+      setTimeout(() => modal.classList.add('active'), 10);
+    }
+    
+    function updateEditDistricts() {
+      const city = document.getElementById('editCity').value;
+      const districtSelect = document.getElementById('editDistrict');
+      const districts = cities[city] || [];
+      
+      districtSelect.innerHTML = '<option value="">Выберите район</option>' + 
+        districts.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+    
+    function closeEditProfile() {
+      const modal = document.getElementById('editProfileModal');
+      if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+      }
+    }
+    
+    function saveProfile() {
+      const name = document.getElementById('editName').value.trim();
+      const phone = document.getElementById('editPhone').value.trim();
+      const city = document.getElementById('editCity').value;
+      const district = document.getElementById('editDistrict').value;
+      
+      if (!name) {
+        showToast('Введите имя', 'error');
+        return;
+      }
+      
+      currentUser.name = name;
+      currentUser.phone = phone;
+      currentUser.city = city;
+      currentUser.district = district;
+      
+      // Save to API
+      apiCall('/register', 'POST', {
+        telegram_id: currentUser.telegram_id,
+        name: currentUser.name,
+        phone: currentUser.phone,
+        role: currentUser.role,
+        city: currentUser.city,
+        district: currentUser.district
+      }).then(() => {
+        saveUser();
+        closeEditProfile();
+        loadProfile();
+        showToast('Профиль сохранён!', 'success');
+      }).catch(() => {
+        // Still save locally
+        saveUser();
+        closeEditProfile();
+        loadProfile();
+        showToast('Профиль сохранён локально', 'success');
+      });
     }
 
     function logout() {
