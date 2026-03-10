@@ -1613,23 +1613,16 @@
   </div>
 
   <script>
+    // ==================== CONFIG ====================
+    // Change this to your production API URL
+    const API_BASE = window.location.origin + '/api';
+    
     // ==================== STATE ====================
     let currentUser = null;
     let selectedRole = null;
     let jobs = [];
     let currentFilter = 'all';
-
-    // Sample jobs data
-    const sampleJobs = [
-      { id: 1, title: 'Перевезти вещи на дачу', desc: 'Нужно перевезти коробки и мебель из квартиры на дачу', payment: 3000, type: 'fixed', category: 'Грузчики', city: 'Москва', date: '2026-03-10', employer: 'Александр' },
-      { id: 2, title: 'Помыть окна в офисе', desc: 'Требуется помыть 10 окон в офисном здании', payment: 2500, type: 'fixed', category: 'Клининг', city: 'Москва', date: '2026-03-11', employer: 'Мария' },
-      { id: 3, title: 'Собрать мебель ИКЕА', desc: 'Нужно собрать шкаф и кровать', payment: 2000, type: 'fixed', category: 'Сборщики', city: 'Санкт-Петербург', date: '2026-03-10', employer: 'Дмитрий' },
-      { id: 4, title: 'Погрузка/разгрузка', desc: 'Погрузка продуктов на складе, 4 часа', payment: 400, type: 'hour', category: 'Разнорабочие', city: 'Казань', date: '2026-03-12', employer: 'ООО "Логист"' },
-      { id: 5, title: 'Уборка квартиры после ремонта', desc: 'Генеральная уборка 2-комнатной квартиры', payment: 5000, type: 'fixed', category: 'Клининг', city: 'Екатеринбург', date: '2026-03-15', employer: 'Елена' },
-      { id: 6, title: 'Доставить документы', desc: 'Срочная доставка документов по городу', payment: 800, type: 'fixed', category: 'Курьеры', city: 'Москва', date: '2026-03-09', employer: 'Игорь' },
-      { id: 7, title: 'Вывезти строительный мусор', desc: 'Вывезти мешки с мусором после ремонта', payment: 3500, type: 'fixed', category: 'Грузчики', city: 'Новосибирск', date: '2026-03-11', employer: 'Сергей' },
-      { id: 8, title: 'Монтаж полок', desc: 'Установить 5 полок на стену', payment: 1500, type: 'fixed', category: 'Разнорабочие', city: 'Ростов-на-Дону', date: '2026-03-14', employer: 'Анна' },
-    ];
+    let searchQuery = '';
 
     // Districts by city
     const districts = {
@@ -1640,6 +1633,28 @@
       'Новосибирск': ['Центральный', 'Дзержинский', 'Октябрьский', 'Ленинский'],
       'Ростов-на-Дону': ['Центральный', 'Пролетарский', 'Ворошиловский', 'Железнодорожный']
     };
+
+    // ==================== API ====================
+    async function apiCall(endpoint, options = {}) {
+      try {
+        const response = await fetch(API_BASE + endpoint, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          }
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'API error');
+        }
+        return data;
+      } catch (error) {
+        console.error('API Error:', error);
+        showToast(error.message || 'Ошибка соединения', 'error');
+        throw error;
+      }
+    }
 
     // ==================== TELEGRAM ====================
     let telegramUser = null;
@@ -1739,25 +1754,48 @@
         return;
       }
       
-      // Save user
-      currentUser = {
-        name: name,
-        role: selectedRole,
-        city: city,
-        district: district,
-        telegram_id: telegramUser ? telegramUser.id : Date.now()
-      };
+      const telegram_id = telegramUser ? String(telegramUser.id) : 'demo_' + Date.now();
       
-      saveUser();
-      
-      showToast('Добро пожаловать!', 'success');
-      
-      // Navigate based on role
-      if (selectedRole === 'employer') {
-        navigateTo('create-job');
-      } else {
-        navigateTo('jobs');
-      }
+      // Register user via API
+      apiCall('/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          telegram_id: telegram_id,
+          name: name,
+          role: selectedRole,
+          city: city,
+          district: district
+        })
+      }).then(data => {
+        currentUser = data.user;
+        saveUser();
+        showToast('Добро пожаловать!', 'success');
+        
+        // Navigate based on role
+        if (selectedRole === 'employer') {
+          navigateTo('create-job');
+        } else {
+          navigateTo('jobs');
+        }
+      }).catch(() => {
+        // Fallback to local storage
+        currentUser = {
+          telegram_id: telegram_id,
+          name: name,
+          role: selectedRole,
+          city: city,
+          district: district,
+          id: Date.now()
+        };
+        saveUser();
+        showToast('Добро пожаловать!', 'success');
+        
+        if (selectedRole === 'employer') {
+          navigateTo('create-job');
+        } else {
+          navigateTo('jobs');
+        }
+      });
     }
 
     // City change handler
@@ -1778,48 +1816,39 @@
     });
 
     // ==================== JOBS ====================
-    let searchQuery = '';
-
     function loadJobs() {
       const container = document.getElementById('jobsList');
+      container.innerHTML = '<div class="loading"><div class="spinner"></div><p class="loading-text">Загрузка заказов...</p></div>';
       
-      // Filter jobs
-      let filteredJobs = [...sampleJobs];
+      // Build query params
+      let params = '';
+      if (searchQuery) params += 'search=' + encodeURIComponent(searchQuery);
+      if (currentFilter === 'hour') params += (params ? '&' : '') + 'type=hour';
+      if (currentFilter === 'shift') params += (params ? '&' : '') + 'type=shift';
       
-      // Apply search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filteredJobs = filteredJobs.filter(j => 
-          j.title.toLowerCase().includes(query) || 
-          j.desc.toLowerCase().includes(query) ||
-          j.category.toLowerCase().includes(query) ||
-          j.city.toLowerCase().includes(query)
-        );
-      }
-      
+      apiCall('/jobs' + (params ? '?' + params : '')).then(jobs => {
+        renderJobs(jobs, container);
+      }).catch(() => {
+        // Fallback - show demo data
+        const demoJobs = [
+          { id: 1, title: 'Перевезти вещи на дачу', description: 'Нужно перевезти коробки и мебель', payment: 3000, payment_type: 'fixed', category: 'Грузчики', city: 'Москва', date: '2026-03-10', employer_name: 'Александр' },
+          { id: 2, title: 'Помыть окна в офисе', description: 'Требуется помыть 10 окон', payment: 2500, payment_type: 'fixed', category: 'Клининг', city: 'Москва', date: '2026-03-11', employer_name: 'Мария' },
+        ];
+        renderJobs(demoJobs, container);
+      });
+    }
+
+    function renderJobs(jobsList, container) {
       // Apply quick filter
-      if (currentFilter !== 'all') {
+      if (currentFilter === 'today' || currentFilter === 'tomorrow') {
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        switch(currentFilter) {
-          case 'today':
-            filteredJobs = filteredJobs.filter(j => j.date === today.toISOString().split('T')[0]);
-            break;
-          case 'tomorrow':
-            filteredJobs = filteredJobs.filter(j => j.date === tomorrow.toISOString().split('T')[0]);
-            break;
-          case 'hour':
-            filteredJobs = filteredJobs.filter(j => j.type === 'hour');
-            break;
-          case 'shift':
-            filteredJobs = filteredJobs.filter(j => j.type === 'shift');
-            break;
-        }
+        const targetDate = currentFilter === 'today' ? today.toISOString().split('T')[0] : tomorrow.toISOString().split('T')[0];
+        jobsList = jobsList.filter(j => j.date === targetDate);
       }
       
-      if (filteredJobs.length === 0) {
+      if (jobsList.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
             <div class="empty-icon">
@@ -1834,42 +1863,78 @@
         return;
       }
       
-      container.innerHTML = filteredJobs.map(job => `
+      container.innerHTML = jobsList.map(job => `
         <div class="job-card fade-in" onclick="showJobDetail(${job.id})">
           <div class="job-card-header">
             <div class="job-title">${job.title}</div>
             <div class="job-payment">${formatPayment(job)}</div>
           </div>
-          <div class="job-desc">${job.desc}</div>
+          <div class="job-desc">${job.description}</div>
           <div class="job-tags">
-            <span class="job-tag category">${job.category}</span>
+            <span class="job-tag category">${job.category || 'Другое'}</span>
             <span class="job-tag location">📍 ${job.city}</span>
             <span class="job-tag location">📅 ${formatDate(job.date)}</span>
           </div>
           <div class="job-footer">
-            <span class="job-employer">👤 ${job.employer}</span>
-            <button class="job-respond-btn" onclick="event.stopPropagation();respondToJob(${job.id})">Откликнуться</button>
+            <span class="job-employer">👤 ${job.employer_name}</span>
+            <div style="display: flex; gap: 8px;">
+              <button class="job-respond-btn" style="background: var(--success);" onclick="event.stopPropagation();shareJob(${job.id})">📤</button>
+              <button class="job-respond-btn" onclick="event.stopPropagation();respondToJob(${job.id})">Откликнуться</button>
+            </div>
           </div>
         </div>
       `).join('');
       
       // Setup quick filters
       document.querySelectorAll('.quick-filter').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.onclick = function() {
           document.querySelectorAll('.quick-filter').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
           currentFilter = this.dataset.filter;
           loadJobs();
-        });
+        };
       });
     }
 
+    function shareJob(jobId) {
+      apiCall('/jobs/' + jobId).then(job => {
+        const text = `🔍 Нашёл работу в Трудягин!\n\n` +
+          `📌 ${job.title}\n` +
+          `💰 ${formatPayment(job)}\n` +
+          `📍 ${job.city}\n\n` +
+          `Откликнись: https://trudyagin-tg-ej5c.vercel.app/?job=${jobId}`;
+        
+        tg.shareUrl(text);
+      }).catch(() => {
+        showToast('Не удалось поделиться', 'error');
+      });
+    }
+
+    function searchJobs() {
+      searchQuery = document.getElementById('jobSearch').value;
+      loadJobs();
+    }
+
     function showJobDetail(jobId) {
-      const job = sampleJobs.find(j => j.id === jobId);
-      if (!job) return;
-      
-      // Show job detail in modal or navigate
-      tg.showAlert(`${job.title}\n\n${job.desc}\n\nОплата: ${formatPayment(job)}\nКатегория: ${job.category}\nГород: ${job.city}`);
+      apiCall('/jobs/' + jobId).then(job => {
+        let message = `${job.title}\n\n${job.description}\n\n💰 Оплата: ${formatPayment(job)}\n📂 Категория: ${job.category || 'Другое'}\n📍 Город: ${job.city}`;
+        
+        if (job.requirements) {
+          try {
+            const req = JSON.parse(job.requirements);
+            if (req.rf || req.noCriminal || req.selfEmployed) {
+              message += '\n\n📋 Требования:';
+              if (req.rf) message += '\n- Только граждане РФ';
+              if (req.noCriminal) message += '\n- Без судимостей';
+              if (req.selfEmployed) message += '\n- Только самозанятые';
+            }
+          } catch(e) {}
+        }
+        
+        tg.showAlert(message);
+      }).catch(() => {
+        tg.showAlert('Не удалось загрузить详细信息');
+      });
     }
 
     function respondToJob(jobId) {
@@ -1884,13 +1949,24 @@
         return;
       }
       
-      showToast('Отправлена заявка работодателю!', 'success');
+      apiCall('/respond', {
+        method: 'POST',
+        body: JSON.stringify({
+          job_id: jobId,
+          worker_id: currentUser.id,
+          worker_name: currentUser.name
+        })
+      }).then(() => {
+        showToast('Отправлена заявка работодателю!', 'success');
+      }).catch(err => {
+        showToast(err.message || 'Ошибка при отправке', 'error');
+      });
     }
 
     function formatPayment(job) {
-      if (job.type === 'hour') {
+      if (job.payment_type === 'hour') {
         return job.payment + ' ₽/час';
-      } else if (job.type === 'shift') {
+      } else if (job.payment_type === 'shift') {
         return job.payment + ' ₽/смену';
       }
       return job.payment.toLocaleString() + ' ₽';
@@ -1930,34 +2006,31 @@
       const reqNoCriminal = document.getElementById('reqNoCriminal').checked;
       const reqSelfEmployed = document.getElementById('reqSelfEmployed').checked;
       
-      const job = {
-        id: Date.now(),
-        title: document.getElementById('jobTitle').value,
-        desc: document.getElementById('jobDesc').value,
-        payment: parseInt(document.getElementById('jobPayment').value),
-        type: document.getElementById('jobPaymentType').value,
-        category: document.getElementById('jobCategory').value,
-        city: document.getElementById('jobCity').value,
-        date: document.getElementById('jobDate').value,
-        employer: currentUser.name,
-        employer_id: currentUser.telegram_id,
-        requirements: {
-          rf: reqRF,
-          noCriminal: reqNoCriminal,
-          selfEmployed: reqSelfEmployed
-        }
-      };
-      
-      // Add to jobs
-      sampleJobs.unshift(job);
-      
-      showToast('Заказ опубликован!', 'success');
-      
-      // Clear form
-      e.target.reset();
-      
-      // Navigate to my jobs
-      navigateTo('my-jobs');
+      apiCall('/jobs', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: document.getElementById('jobTitle').value,
+          description: document.getElementById('jobDesc').value,
+          payment: parseInt(document.getElementById('jobPayment').value),
+          payment_type: document.getElementById('jobPaymentType').value,
+          category: document.getElementById('jobCategory').value,
+          city: document.getElementById('jobCity').value,
+          date: document.getElementById('jobDate').value,
+          employer_id: currentUser.id,
+          employer_name: currentUser.name,
+          requirements: {
+            rf: reqRF,
+            noCriminal: reqNoCriminal,
+            selfEmployed: reqSelfEmployed
+          }
+        })
+      }).then(data => {
+        showToast('Заказ опубликован!', 'success');
+        e.target.reset();
+        navigateTo('my-jobs');
+      }).catch(err => {
+        showToast(err.message || 'Ошибка при создании заказа', 'error');
+      });
     }
 
     // ==================== MY JOBS ====================
@@ -1980,57 +2053,100 @@
         return;
       }
       
-      // Filter jobs based on role
-      let myJobs = [];
+      container.innerHTML = '<div class="loading"><div class="spinner"></div><p class="loading-text">Загрузка...</p></div>';
       
-      if (currentUser.role === 'employer') {
-        myJobs = sampleJobs.filter(j => j.employer_id === currentUser.telegram_id);
-      } else {
-        // Show responded jobs (for demo, show all)
-        myJobs = sampleJobs.slice(0, 3);
-      }
+      const endpoint = currentUser.role === 'employer' 
+        ? '/my-jobs/employer/' + currentUser.id 
+        : '/my-jobs/worker/' + currentUser.id;
       
-      if (myJobs.length === 0) {
+      apiCall(endpoint).then(jobs => {
+        if (jobs.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                </svg>
+              </div>
+              <h3 class="empty-title">${currentUser.role === 'employer' ? 'У вас пока нет заказов' : 'Вы пока не откликались'}</h3>
+              <p class="empty-desc">${currentUser.role === 'employer' ? 'Создайте первый заказ' : 'Найдите подходящую работу'}</p>
+              <button class="btn btn-primary mt-4" onclick="navigateTo('${currentUser.role === 'employer' ? 'create-job' : 'jobs'}')">
+                ${currentUser.role === 'employer' ? 'Создать заказ' : 'Найти работу'}
+              </button>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = jobs.map(job => {
+          const isEmployer = currentUser.role === 'employer';
+          const status = job.status || (isEmployer ? 'open' : 'pending');
+          const statusText = status === 'open' ? 'Открыт' : status === 'in_progress' ? 'В работе' : 'Завершён';
+          const showApplicants = isEmployer && status === 'open';
+          
+          return `
+            <div class="job-card fade-in">
+              <div class="job-card-header">
+                <div class="job-title">${job.title}</div>
+                <div class="job-payment">${formatPayment(job)}</div>
+              </div>
+              <div class="job-desc">${job.description || job.description}</div>
+              <div class="job-tags">
+                <span class="job-tag category">${job.category || 'Другое'}</span>
+                <span class="job-tag location">📍 ${job.city}</span>
+                <span class="job-tag location">📅 ${formatDate(job.date)}</span>
+              </div>
+              <div class="job-footer">
+                <span class="job-employer">Статус: ${statusText}</span>
+                ${showApplicants ? `<button class="job-respond-btn" onclick="showApplicants(${job.id})">Отклики (${job.responses_count || 0})</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }).catch(() => {
         container.innerHTML = `
           <div class="empty-state">
-            <div class="empty-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              </svg>
-            </div>
-            <h3 class="empty-title">${currentUser.role === 'employer' ? 'У вас пока нет заказов' : 'Вы пока не откликались'}</h3>
-            <p class="empty-desc">${currentUser.role === 'employer' ? 'Создайте первый заказ' : 'Найдите подходящую работу'}</p>
+            <h3 class="empty-title">У вас пока нет заказов</h3>
             <button class="btn btn-primary mt-4" onclick="navigateTo('${currentUser.role === 'employer' ? 'create-job' : 'jobs'}')">
               ${currentUser.role === 'employer' ? 'Создать заказ' : 'Найти работу'}
             </button>
           </div>
         `;
-        return;
-      }
-      
-      container.innerHTML = myJobs.map(job => `
-        <div class="job-card fade-in">
-          <div class="job-card-header">
-            <div class="job-title">${job.title}</div>
-            <div class="job-payment">${formatPayment(job)}</div>
-          </div>
-          <div class="job-tags">
-            <span class="job-tag category">${job.category}</span>
-            <span class="job-tag location">📍 ${job.city}</span>
-            <span class="job-tag location">📅 ${formatDate(job.date)}</span>
-          </div>
-          <div class="job-footer">
-            <span class="job-employer">Статус: ${job.employer_id === currentUser.telegram_id ? 'Ваш заказ' : 'Отклик отправлен'}</span>
-          </div>
-        </div>
-      `).join('');
+      });
+    }
+
+    function showApplicants(jobId) {
+      apiCall('/responses/job/' + jobId).then(responses => {
+        if (responses.length === 0) {
+          tg.showAlert('Пока нет откликов на этот заказ');
+          return;
+        }
+        
+        let message = '📋 Отклики на ваш заказ:\n\n';
+        responses.forEach((r, i) => {
+          message += `${i + 1}. ${r.name}\n`;
+          message += `   ⭐ Рейтинг: ${r.rating || 0}\n`;
+          message += `   📋 Выполнено: ${r.jobs_done || 0}\n`;
+          if (r.city) message += `   📍 ${r.city}\n`;
+          message += `   /choose_${jobId}_${r.worker_id} - Выбрать\n\n`;
+        });
+        message += 'Нажмите на команду, чтобы выбрать исполнителя';
+        
+        tg.showAlert(message);
+      });
     }
 
     // ==================== STATS ====================
     function updateStats() {
-      document.getElementById('statJobs').textContent = sampleJobs.length;
-      document.getElementById('statWorkers').textContent = '120+';
-      document.getElementById('statDone').textContent = '89';
+      apiCall('/stats').then(stats => {
+        document.getElementById('statJobs').textContent = stats.jobs;
+        document.getElementById('statWorkers').textContent = stats.workers;
+        document.getElementById('statDone').textContent = stats.done;
+      }).catch(() => {
+        document.getElementById('statJobs').textContent = '0';
+        document.getElementById('statWorkers').textContent = '0';
+        document.getElementById('statDone').textContent = '0';
+      });
     }
 
     // ==================== SEARCH ====================
