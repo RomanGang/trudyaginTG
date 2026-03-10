@@ -10,11 +10,11 @@ from flask_cors import CORS
 
 app = Flask(__name__, static_folder='frontend')
 
-# CORS - allow specific origins only
-ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 
-    'https://trudyagin-tg-ej6c.vercel.app,http://localhost:3000,http://localhost:5173').split(',')
-
-CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+# CORS - allow all origins for development
+CORS(app, 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # ==================== VALIDATION ====================
 from functools import wraps
@@ -160,7 +160,7 @@ next_ids = {'user': 1, 'job': 1, 'response': 1, 'rating': 1}
 
 # ==================== API ROUTES ====================
 
-@app.route('/api/health')
+@app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 

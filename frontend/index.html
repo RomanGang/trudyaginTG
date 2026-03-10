@@ -1730,11 +1730,17 @@
 
   <script>
     // ==================== CONFIG ====================
-    // Use fixed production API (for Vercel deployment)
-    const API_BASE = 'https://trudyagin-tg-ej6c.vercel.app/api';
+    // Dynamic API URL - use current origin, fallback to Vercel
+    let API_BASE = window.location.origin + '/api';
+    
+    // For specific Vercel deployment, use the known working URL
+    // This ensures CORS works correctly
+    if (window.location.hostname.includes('vercel.app')) {
+      API_BASE = 'https://trudyagin-tg-ej6c.vercel.app/api';
+    }
     
     // For local development use: http://localhost:3000/api
-    // const API_BASE = window.location.origin + '/api';
+    // console.log('API Base URL:', API_BASE);
     
     // ==================== STATE ====================
     let currentUser = null;
