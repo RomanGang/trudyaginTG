@@ -5,7 +5,11 @@
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "node backend/server.js"
+    "dev": "node backend/server.js",
+    "test": "node backend/test.js",
+    "lint": "eslint backend/",
+    "lint:fix": "eslint backend/ --fix",
+    "format": "prettier --write \"backend/**/*.js\""
   },
   "keywords": ["telegram", "mini-app", "jobs", "workers"],
   "author": "",
@@ -14,7 +18,13 @@
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "pg": "^8.11.0",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.5"
   },
   "engines": {
     "node": ">=18.0.0"
