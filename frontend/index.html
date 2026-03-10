@@ -1184,14 +1184,14 @@
           <h3 style="text-align: center; margin-bottom: 24px; font-size: 20px;">Регистрация</h3>
           
           <div class="role-cards" style="margin-bottom: 24px;">
-            <div class="role-card worker" id="roleWorker" data-role="worker">
+            <div class="role-card worker" id="roleWorker" onclick="console.log('Worker clicked'); selectRole('worker')">
               <div class="role-icon">👷</div>
               <div class="role-info">
                 <h3>Исполнитель</h3>
                 <p>Хочу найти работу</p>
               </div>
             </div>
-            <div class="role-card employer" id="roleEmployer" data-role="employer">
+            <div class="role-card employer" id="roleEmployer" onclick="console.log('Employer clicked'); selectRole('employer')">
               <div class="role-icon">🏢</div>
               <div class="role-info">
                 <h3>Работодатель</h3>
@@ -3236,9 +3236,17 @@
         dateInput.min = new Date().toISOString().split('T')[0];
       }
       
-      // Add click listeners for role cards
-      document.getElementById('roleWorker')?.addEventListener('click', () => selectRole('worker'));
-      document.getElementById('roleEmployer')?.addEventListener('click', () => selectRole('employer'));
+      // Add click listeners for role cards (backup approach)
+      document.getElementById('roleWorker')?.addEventListener('click', () => {
+        console.log('Event listener: Worker clicked');
+        selectRole('worker');
+      });
+      document.getElementById('roleEmployer')?.addEventListener('click', () => {
+        console.log('Event listener: Employer clicked');
+        selectRole('employer');
+      });
+      
+      console.log('Init complete');
     }
 
     // Start app
