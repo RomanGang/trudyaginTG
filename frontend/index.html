@@ -1719,33 +1719,41 @@
     let telegramUser = null;
     let tg = null;
 
-    // Initialize Telegram after script loads
+    // Initialize Telegram - wait for script to load
     function initTelegram() {
-      try {
+      console.log('Initializing Telegram...');
+      
+      // Poll for Telegram WebApp (in case script is still loading)
+      let attempts = 0;
+      const maxAttempts = 20;
+      
+      function tryInit() {
+        attempts++;
         if (window.Telegram && window.Telegram.WebApp) {
+          console.log('Telegram WebApp found');
           tg = window.Telegram.WebApp;
           tg.expand();
           tg.ready();
+          console.log('Telegram expanded and ready');
 
           // Get user from Telegram
           if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
             telegramUser = tg.initDataUnsafe.user;
             console.log('Telegram user:', telegramUser);
           }
+        } else if (attempts < maxAttempts) {
+          console.log('Waiting for Telegram... attempt ' + attempts);
+          setTimeout(tryInit, 100);
         } else {
-          console.log('Not running in Telegram');
+          console.log('Not running in Telegram - WebApp not found after ' + maxAttempts + ' attempts');
         }
-      } catch(e) {
-        console.log('Telegram init error:', e);
       }
+      
+      tryInit();
     }
     
-    // Initialize immediately or after DOM
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initTelegram);
-    } else {
-      initTelegram();
-    }
+    // Initialize after a short delay to ensure script loads
+    setTimeout(initTelegram, 100);
 
     // ==================== NAVIGATION ====================
     function navigateTo(page) {
