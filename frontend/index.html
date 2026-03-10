@@ -2798,25 +2798,49 @@
     }
 
     // ==================== LOCAL STORAGE ====================
+    // Use sessionStorage as primary (works in Telegram), fallback to memory
+    let userStorage = sessionStorage;
+    
     function saveUser() {
-      console.log('Saving user to localStorage:', currentUser);
-      localStorage.setItem('trudyagin_user', JSON.stringify(currentUser));
-      console.log('User saved successfully');
+      console.log('Saving user:', currentUser);
+      try {
+        sessionStorage.setItem('trudyagin_user', JSON.stringify(currentUser));
+        console.log('User saved to sessionStorage');
+      } catch(e) {
+        console.log('sessionStorage not available, using memory only');
+      }
+      // Also keep in memory as backup
+      window.currentUserBackup = currentUser;
     }
 
     function loadUser() {
-      console.log('Loading user from localStorage...');
-      const saved = localStorage.getItem('trudyagin_user');
-      console.log('Raw saved data:', saved);
+      console.log('Loading user...');
+      let saved = null;
+      
+      // Try sessionStorage first
+      try {
+        saved = sessionStorage.getItem('trudyagin_user');
+        console.log('sessionStorage data:', saved ? 'found' : 'null');
+      } catch(e) {
+        console.log('sessionStorage error:', e);
+      }
+      
+      // Fallback to window memory
+      if (!saved && window.currentUserBackup) {
+        console.log('Using backup from memory');
+        currentUser = window.currentUserBackup;
+        return;
+      }
+      
       if (saved) {
         try {
           currentUser = JSON.parse(saved);
-          console.log('User loaded:', currentUser);
+          console.log('User loaded from sessionStorage:', currentUser);
         } catch(e) {
-          console.error('Error loading user:', e);
+          console.error('Error parsing user:', e);
         }
       } else {
-        console.log('No saved user found');
+        console.log('No user found');
       }
     }
 
