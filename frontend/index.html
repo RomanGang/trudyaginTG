@@ -709,6 +709,11 @@
       background: var(--warning);
     }
 
+    .toast.loading {
+      background: var(--primary);
+      min-width: 200px;
+    }
+
     /* ==================== LOADING ==================== */
     .loading {
       display: flex;
@@ -1191,7 +1196,16 @@
           
           <div class="form-section">
             <input type="text" class="input" id="regName" placeholder="Ваше имя" style="margin-bottom: 12px;">
-            <input type="tel" class="input" id="regPhone" placeholder="+7 999 123-45-67" style="margin-bottom: 12px;">
+            
+            <!-- Phone with send code button -->
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <input type="tel" class="input" id="regPhone" placeholder="+7 999 123-45-67" style="flex: 1;">
+              <button type="button" class="btn btn-secondary" id="sendCodeBtn" onclick="sendSMSCode()" style="padding: 12px 16px; white-space: nowrap;">Получить код</button>
+            </div>
+            
+            <!-- SMS Code input -->
+            <input type="text" class="input" id="regCode" placeholder="Код из SMS" style="margin-bottom: 12px;">
+            
             <input type="password" class="input" id="regPassword" placeholder="Придумайте пароль" style="margin-bottom: 12px;">
             <input type="password" class="input" id="regPassword2" placeholder="Повторите пароль" style="margin-bottom: 12px;">
             
@@ -1825,12 +1839,13 @@
     function doRegister() {
       const name = document.getElementById('regName').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
+      const code = document.getElementById('regCode').value.trim();
       const password = document.getElementById('regPassword').value;
       const password2 = document.getElementById('regPassword2').value;
       const city = document.getElementById('regCity').value;
       const district = document.getElementById('regDistrict').value;
       
-      if (!name || !phone || !password) {
+      if (!name || !phone || !code || !password) {
         showToast('Заполните все поля', 'error');
         return;
       }
@@ -1855,6 +1870,7 @@
       apiCall('/register', 'POST', {
         name: name,
         phone: phone,
+        code: code,
         password: password,
         role: selectedRole,
         city: city,
@@ -1867,6 +1883,41 @@
       }).catch(err => {
         const msg = err.message || 'Ошибка регистрации';
         showToast(msg, 'error');
+      });
+    }
+    
+    function sendSMSCode() {
+      const phone = document.getElementById('regPhone').value.trim();
+      
+      if (!phone) {
+        showToast('Введите номер телефона', 'error');
+        return;
+      }
+      
+      const btn = document.getElementById('sendCodeBtn');
+      btn.disabled = true;
+      btn.textContent = 'Отправка...';
+      
+      apiCall('/send-code', 'POST', { phone: phone }).then(data => {
+        showToast('Код отправлен! (Для теста: ' + data.debug_code + ')', 'success');
+        btn.textContent = 'Отправить снова';
+        
+        // Allow resend after 30 seconds
+        let countdown = 30;
+        const interval = setInterval(() => {
+          countdown--;
+          if (countdown <= 0) {
+            clearInterval(interval);
+            btn.disabled = false;
+            btn.textContent = 'Отправить снова';
+          } else {
+            btn.textContent = 'Через ' + countdown + 'с';
+          }
+        }, 1000);
+      }).catch(err => {
+        showToast(err.message || 'Ошибка отправки кода', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Получить код';
       });
     }
     
@@ -2709,11 +2760,24 @@
       const toast = document.createElement('div');
       toast.className = 'toast ' + type;
       toast.textContent = message;
+      
+      // Handle loading type
+      if (type === 'loading') {
+        toast.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; margin-right: 8px;"></div>' + message;
+        toast.style.display = 'flex';
+        toast.style.alignItems = 'center';
+        toast.style.justifyContent = 'center';
+      }
+      
       container.appendChild(toast);
       
-      setTimeout(() => {
-        toast.remove();
-      }, 3000);
+      if (type !== 'loading') {
+        setTimeout(() => {
+          toast.remove();
+        }, 3000);
+      }
+      
+      return toast;
     }
 
     // ==================== INIT ====================

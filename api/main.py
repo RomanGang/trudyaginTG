@@ -1,26 +1,46 @@
 import os
 import json
 import hashlib
+import random
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 
 app = Flask(__name__, static_folder='frontend')
 
-# File-based storage - persists during session on most platforms
+# Use /tmp for Vercel (ephemeral but works within function)
 DATA_FILE = '/tmp/trudyagin_data.json'
+VERCEL_CACHE = '/tmp/vercel_cache.json'
 
 def hash_password(password):
     """Hash password using SHA256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
+def generate_sms_code():
+    """Generate 4-digit SMS code"""
+    return str(random.randint(1000, 9999))
+
+# In-memory cache for SMS codes and pending registrations
+sms_codes = {}  # phone -> code
+pending_users = {}  # temp_id -> user data
+
 def load_data():
-    """Load data from JSON file"""
+    """Load data from file or cache"""
+    # Try cache first (for Vercel)
+    if os.path.exists(VERCEL_CACHE):
+        try:
+            with open(VERCEL_CACHE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    
+    # Try main file
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r') as f:
                 return json.load(f)
         except:
             pass
+    
     return {
         'users': {},
         'jobs': {},
@@ -29,9 +49,9 @@ def load_data():
     }
 
 def save_data(data):
-    """Save data to JSON file"""
+    """Save data to file"""
     try:
-        with open(DATA_FILE, 'w') as f:
+        with open(VERCEL_CACHE, 'w') as f:
             json.dump(data, f)
     except:
         pass
@@ -52,21 +72,33 @@ def register():
     req_data = request.json
     
     phone = req_data.get('phone', '').strip()
-    password = req_data.get('password', '')
+    code = req_data.get('code', '')
     name = req_data.get('name', '')
+    password = req_data.get('password', '')
     role = req_data.get('role', 'worker')
     city = req_data.get('city', '')
     district = req_data.get('district', '')
     
-    if not phone or not password:
-        return jsonify({'error': 'Введите номер телефона и пароль'}), 400
+    if not phone or not code:
+        return jsonify({'error': 'Введите номер телефона и код'}), 400
+    
+    # Verify SMS code
+    expected_code = sms_codes.get(phone)
+    if not expected_code or expected_code != code:
+        return jsonify({'error': 'Неверный код из SMS'}), 400
     
     if not name:
         return jsonify({'error': 'Введите ваше имя'}), 400
     
+    if not password:
+        return jsonify({'error': 'Введите пароль'}), 400
+    
     # Check if phone already registered
     for uid, user in data['users'].items():
         if user.get('phone') == phone:
+            # Clear used code
+            if phone in sms_codes:
+                del sms_codes[phone]
             return jsonify({'error': 'Этот номер телефона уже зарегистрирован'}), 400
     
     # Create new user
@@ -89,9 +121,32 @@ def register():
     data['users'][user_id] = user
     save_data(data)
     
+    # Clear used code
+    if phone in sms_codes:
+        del sms_codes[phone]
+    
     # Return user without password
     user_data = {k: v for k, v in user.items() if k != 'password'}
     return jsonify({'success': True, 'user': user_data})
+
+@app.route('/api/send-code', methods=['POST'])
+def send_code():
+    """Send SMS verification code"""
+    req_data = request.json
+    phone = req_data.get('phone', '').strip()
+    
+    if not phone:
+        return jsonify({'error': 'Введите номер телефона'}), 400
+    
+    # Generate code
+    code = generate_sms_code()
+    sms_codes[phone] = code
+    
+    # In production, integrate with SMS provider (Twilio, etc.)
+    # For demo, log the code
+    print(f"📱 SMS Code for {phone}: {code}")
+    
+    return jsonify({'success': True, 'message': 'Код отправлен', 'debug_code': code})
 
 @app.route('/api/login', methods=['POST'])
 def login():
