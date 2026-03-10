@@ -2,18 +2,116 @@ import os
 import json
 import hashlib
 import random
+import bcrypt
+import re
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder='frontend')
+
+# CORS - allow specific origins only
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 
+    'https://trudyagin-tg-ej6c.vercel.app,http://localhost:3000,http://localhost:5173').split(',')
+
+CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+
+# ==================== VALIDATION ====================
+from functools import wraps
+from time import time
+
+# Rate limiting storage
+rate_limit_storage = {}
+
+def rate_limit(max_requests=10, window_seconds=60):
+    """Rate limiting decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get client IP (from proxy or direct)
+            ip = request.headers.get('X-Forwarded-For', 
+                   request.headers.get('X-Real-IP', 
+                   request.remote_addr or 'unknown'))
+            
+            now = time()
+            key = f"{ip}:{f.__name__}"
+            
+            # Clean old entries
+            if key in rate_limit_storage:
+                rate_limit_storage[key] = [
+                    t for t in rate_limit_storage[key] 
+                    if now - t < window_seconds
+                ]
+            else:
+                rate_limit_storage[key] = []
+            
+            # Check limit
+            if len(rate_limit_storage[key]) >= max_requests:
+                return jsonify({
+                    'error': 'Слишком много запросов. Попробуйте позже.'
+                }), 429
+            
+            # Add current request
+            rate_limit_storage[key].append(now)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+def validate_phone(phone):
+    """Validate phone number format"""
+    if not phone:
+        return False, 'Номер телефона обязателен'
+    # Russian phone format: +7 xxx xxx xx xx
+    pattern = r'^\+?7?\d{10,15}$'
+    if not re.match(pattern, phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')):
+        return False, 'Неверный формат номера телефона'
+    return True, None
+
+def validate_password(password):
+    """Validate password strength"""
+    if not password:
+        return False, 'Пароль обязателен'
+    if len(password) < 4:
+        return False, 'Пароль должен быть минимум 4 символа'
+    if len(password) > 100:
+        return False, 'Пароль слишком длинный'
+    return True, None
+
+def validate_name(name):
+    """Validate name"""
+    if not name or len(name.strip()) < 2:
+        return False, 'Имя должно быть минимум 2 символа'
+    if len(name) > 100:
+        return False, 'Имя слишком длинное'
+    return True, None
+
+def validate_role(role):
+    """Validate user role"""
+    if role not in ['worker', 'employer']:
+        return False, 'Неверная роль'
+    return True, None
+
+def validate_city(city):
+    """Validate city"""
+    allowed_cities = ['Москва', 'Санкт-Петербург', 'Казань', 'Екатеринбург', 'Новосибирск', 'Ростов-на-Дону']
+    if city and city not in allowed_cities:
+        return False, f'Город должен быть один из: {", ".join(allowed_cities)}'
+    return True, None
 
 # Use /tmp for Vercel (ephemeral but works within function)
 DATA_FILE = '/tmp/trudyagin_data.json'
 VERCEL_CACHE = '/tmp/vercel_cache.json'
 
 def hash_password(password):
-    """Hash password using SHA256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash password using bcrypt"""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(password, hashed):
+    """Verify password against bcrypt hash"""
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except:
+        return False
 
 def generate_sms_code():
     """Generate 4-digit SMS code"""
@@ -67,6 +165,7 @@ def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
 @app.route('/api/register', methods=['POST'])
+@rate_limit(max_requests=3, window_seconds=60)  # 3 registrations per minute
 def register():
     global data, next_ids
     req_data = request.json
@@ -79,19 +178,34 @@ def register():
     city = req_data.get('city', '')
     district = req_data.get('district', '')
     
-    if not phone or not code:
-        return jsonify({'error': 'Введите номер телефона и код'}), 400
+    # Validate all inputs
+    valid, error = validate_phone(phone)
+    if not valid:
+        return jsonify({'error': error}), 400
+    
+    valid, error = validate_name(name)
+    if not valid:
+        return jsonify({'error': error}), 400
+    
+    valid, error = validate_password(password)
+    if not valid:
+        return jsonify({'error': error}), 400
+    
+    valid, error = validate_role(role)
+    if not valid:
+        return jsonify({'error': error}), 400
+    
+    valid, error = validate_city(city)
+    if not valid:
+        return jsonify({'error': error}), 400
+    
+    if not code:
+        return jsonify({'error': 'Введите код из SMS'}), 400
     
     # Verify SMS code
     expected_code = sms_codes.get(phone)
     if not expected_code or expected_code != code:
         return jsonify({'error': 'Неверный код из SMS'}), 400
-    
-    if not name:
-        return jsonify({'error': 'Введите ваше имя'}), 400
-    
-    if not password:
-        return jsonify({'error': 'Введите пароль'}), 400
     
     # Check if phone already registered
     for uid, user in data['users'].items():
@@ -130,6 +244,7 @@ def register():
     return jsonify({'success': True, 'user': user_data})
 
 @app.route('/api/send-code', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=60)  # 5 SMS per minute
 def send_code():
     """Send SMS verification code via Telegram"""
     req_data = request.json
@@ -177,6 +292,7 @@ def send_code():
     return jsonify({'success': True, 'message': 'Код отправлен', 'debug_code': code})
 
 @app.route('/api/login', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=60)  # 10 login attempts per minute
 def login():
     global data
     req_data = request.json
@@ -190,7 +306,8 @@ def login():
     # Find user by phone
     for uid, user in data['users'].items():
         if user.get('phone') == phone:
-            if user.get('password') == hash_password(password):
+            stored_hash = user.get('password', '')
+            if verify_password(password, stored_hash):
                 # Return user without password
                 user_data = {k: v for k, v in user.items() if k != 'password'}
                 return jsonify({'success': True, 'user': user_data})

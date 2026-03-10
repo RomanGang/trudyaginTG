@@ -1,14 +1,16 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
-// Bot token from BotFather
-const TOKEN = '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A';
+// Bot token from environment (or use default for development)
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A';
 
 // Create bot
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-// API URL (production on Vercel)
-const API_URL = 'https://trudyagin-tg-ej5c.vercel.app/api';
+// API URL from environment or use default
+const API_URL = process.env.API_URL || 'https://trudyagin-tg-ej6c.vercel.app/api';
+
+const APP_URL = process.env.APP_URL || 'https://trudyagin-tg-ej6c.vercel.app';
 
 // Start command
 bot.onText(/\/start/, (msg) => {
@@ -18,7 +20,7 @@ bot.onText(/\/start/, (msg) => {
     'Я помогу вам:\n' +
     '• Найти работу или работников\n' +
     '• Выбрать исполнителя для заказа\n\n' +
-    'Откройте приложение: https://trudyagin-tg-ej5c.vercel.app/',
+    `Откройте приложение: ${APP_URL}/`,
     { parse_mode: 'HTML' }
   );
 });
