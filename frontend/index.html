@@ -1614,10 +1614,8 @@
 
   <script>
     // ==================== CONFIG ====================
-    // Use current origin for API (works on all deployments)
-    const API_BASE = (window.location.protocol === 'file:') 
-      ? 'https://tall-badgers-hope.loca.lt/api'
-      : window.location.origin + '/api';
+    // Use Vercel API (production)
+    const API_BASE = window.location.origin + '/api';
     
     // ==================== STATE ====================
     let currentUser = null;
@@ -1906,9 +1904,7 @@
 
     function shareJob(jobId) {
       apiCall('/jobs/' + jobId).then(job => {
-        const baseUrl = (window.location.protocol === 'file:') 
-          ? 'https://tall-badgers-hope.loca.lt'
-          : window.location.origin;
+        const baseUrl = window.location.origin;
         const text = `🔍 Нашёл работу в Трудягин!\n\n` +
           `📌 ${job.title}\n` +
           `💰 ${formatPayment(job)}\n` +

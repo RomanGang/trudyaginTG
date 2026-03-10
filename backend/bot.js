@@ -7,8 +7,8 @@ const TOKEN = '8048217702:AAEOxzXkU51gQ9ykHcQu_Z6Y43VZyXSyq8A';
 // Create bot
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-// API URL (change this to your production API)
-const API_URL = 'https://tall-badgers-hope.loca.lt/api';
+// API URL (production on Vercel)
+const API_URL = 'https://trudyagin-tg-ej5c.vercel.app/api';
 
 // Start command
 bot.onText(/\/start/, (msg) => {
