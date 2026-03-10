@@ -111,10 +111,22 @@ function AuthPage({ onLogin, setError, error }: { onLogin: (u: User) => void; se
 
   const sendCode = async () => {
     if (!phone) return setError("Введите номер телефона");
+    setError("");
     setLoading(true);
+    
+    // Timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError("Превышен таймаут. Попробуйте снова.");
+    }, 15000);
+    
     try {
+      console.log("Sending code to:", phone);
       const res = await fetch("/api/auth/send-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
+      console.log("Response status:", res.status);
       const data = await res.json();
+      console.log("Response data:", data);
+      clearTimeout(timeout);
       if (data.success) {
         setStep("code");
         if (data.debug_code) setCode(data.debug_code);
@@ -122,6 +134,8 @@ function AuthPage({ onLogin, setError, error }: { onLogin: (u: User) => void; se
         setError(data.message || "Ошибка");
       }
     } catch (e) {
+      console.error("Error:", e);
+      clearTimeout(timeout);
       setError("Ошибка соединения");
     }
     setLoading(false);
@@ -129,16 +143,30 @@ function AuthPage({ onLogin, setError, error }: { onLogin: (u: User) => void; se
 
   const verifyCode = async () => {
     if (!code || !phone || !password) return setError("Заполните все поля");
+    setError("");
+    
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError("Превышен таймаут");
+    }, 15000);
+    
     if (isRegister) {
+      clearTimeout(timeout);
       setStep("form");
     } else {
       setLoading(true);
       try {
+        console.log("Logging in with:", phone);
         const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, password }) });
+        console.log("Login response:", res.status);
         const data = await res.json();
+        console.log("Login data:", data);
+        clearTimeout(timeout);
         if (data.success) onLogin(data.user);
         else setError(data.message || "Ошибка");
       } catch (e) {
+        console.error("Login error:", e);
+        clearTimeout(timeout);
         setError("Ошибка");
       }
       setLoading(false);
@@ -147,13 +175,26 @@ function AuthPage({ onLogin, setError, error }: { onLogin: (u: User) => void; se
 
   const handleRegister = async () => {
     if (!name || !password || password !== confirmPassword || !city || !role) return setError("Заполните все поля корректно");
+    setError("");
     setLoading(true);
+    
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError("Превышен таймаут");
+    }, 15000);
+    
     try {
+      console.log("Registering:", name, phone, role, city);
       const res = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, phone, code, password, role, city }) });
+      console.log("Register response:", res.status);
       const data = await res.json();
+      console.log("Register data:", data);
+      clearTimeout(timeout);
       if (data.success) onLogin(data.user);
       else setError(data.message || "Ошибка");
     } catch (e) {
+      console.error("Register error:", e);
+      clearTimeout(timeout);
       setError("Ошибка");
     }
     setLoading(false);
