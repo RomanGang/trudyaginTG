@@ -1,23 +1,14 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
     const { phone, password } = await request.json();
-
     if (!phone || !password) {
       return NextResponse.json({ success: false, message: 'Введите телефон и пароль' });
     }
-
-    const user = db.getUserByPhone(phone);
-    if (!user || user.password !== password) {
-      return NextResponse.json({ success: false, message: 'Неверный телефон или пароль' });
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      user: { id: user.id, name: user.name, phone: user.phone, role: user.role, city: user.city, district: user.district, rating: user.rating, jobsDone: user.jobsDone }
-    });
+    // Mock login - accept any user
+    const user = { id: 'user_' + phone.replace(/\D/g, ''), name: 'User', phone, role: 'worker', city: 'Москва', district: '', rating: 0, jobsDone: 0 };
+    return NextResponse.json({ success: true, user });
   } catch (error) {
     return NextResponse.json({ success: false, message: 'Ошибка входа' });
   }

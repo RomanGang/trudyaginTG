@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 
+// Simple stats without DB for now
 export async function GET() {
   try {
-    const stats = db.getStats();
-    return NextResponse.json({ ...stats, done: 0 });
+    return NextResponse.json({ jobs: 0, workers: 0, done: 0 });
   } catch (error) {
+    console.error('Stats error:', error);
     return NextResponse.json({ message: 'Ошибка получения статистики' }, { status: 500 });
   }
 }
