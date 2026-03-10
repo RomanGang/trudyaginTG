@@ -83,6 +83,24 @@ class Database {
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_jobs_employer ON jobs(employer_id)`);
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_responses_job ON responses(job_id)`);
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_ratings_user ON ratings(to_user)`);
+
+    // Messages table for chat
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id INTEGER,
+        sender_id INTEGER,
+        receiver_id INTEGER,
+        text TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (sender_id) REFERENCES users(id),
+        FOREIGN KEY (receiver_id) REFERENCES users(id)
+      )
+    `);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_messages_job ON messages(job_id)`);
+    this.db.run(`CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id)`);
   }
 
   // Helper methods for async/await

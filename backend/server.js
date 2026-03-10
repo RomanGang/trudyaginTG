@@ -8,6 +8,7 @@ const usersRouter = require('./routes/users');
 const jobsRouter = require('./routes/jobs');
 const responsesRouter = require('./routes/responses');
 const ratingsRouter = require('./routes/ratings');
+const messagesRouter = require('./routes/messages');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,7 @@ app.use('/api', usersRouter);
 app.use('/api', jobsRouter);
 app.use('/api', responsesRouter);
 app.use('/api', ratingsRouter);
+app.use('/api', messagesRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
