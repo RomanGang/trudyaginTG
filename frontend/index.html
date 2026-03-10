@@ -1973,6 +1973,9 @@
     }
     
     function doRegister() {
+      console.log('doRegister called, selectedRole:', selectedRole);
+      alert('Регистрация: роль=' + selectedRole);
+      
       const name = document.getElementById('regName').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
       const code = document.getElementById('regCode').value.trim();
@@ -2088,31 +2091,45 @@
     function submitRegistration(e) {
       e.preventDefault();
       
+      const phone = document.getElementById('regPhone').value.trim();
+      const code = document.getElementById('regCode').value.trim();
+      const password = document.getElementById('regPassword').value;
       const name = document.getElementById('regName').value.trim();
       const city = document.getElementById('regCity').value;
       const district = document.getElementById('regDistrict').value;
       
-      if (!name || !city || !selectedRole) {
+      if (!name || !phone || !code || !password || !city) {
         showToast('Заполните все обязательные поля', 'error');
         return;
       }
       
-      const telegram_id = telegramUser ? String(telegramUser.id) : 'demo_' + Date.now();
+      if (!selectedRole) {
+        showToast('Выберите роль', 'error');
+        return;
+      }
       
-      // Register user via API
-      apiCall('/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          telegram_id: telegram_id,
-          name: name,
-          role: selectedRole,
-          city: city,
-          district: district
-        })
+      if (password.length < 4) {
+        showToast('Пароль должен быть минимум 4 символа', 'error');
+        return;
+      }
+      
+      showToast('Регистрация...', 'loading');
+      
+      console.log('Sending registration request:', { name, phone, code, role: selectedRole, city, district });
+      
+      apiCall('/register', 'POST', {
+        name: name,
+        phone: phone,
+        code: code,
+        password: password,
+        role: selectedRole,
+        city: city,
+        district: district
       }).then(data => {
+        console.log('Registration success:', data);
         currentUser = data.user;
         saveUser();
-        showToast('Добро пожаловать!', 'success');
+        showToast('Добро пожаловать, ' + data.user.name + '!', 'success');
         
         // Navigate based on role
         if (selectedRole === 'employer') {
@@ -2120,24 +2137,9 @@
         } else {
           navigateTo('jobs');
         }
-      }).catch(() => {
-        // Fallback to local storage
-        currentUser = {
-          telegram_id: telegram_id,
-          name: name,
-          role: selectedRole,
-          city: city,
-          district: district,
-          id: Date.now()
-        };
-        saveUser();
-        showToast('Добро пожаловать!', 'success');
-        
-        if (selectedRole === 'employer') {
-          navigateTo('create-job');
-        } else {
-          navigateTo('jobs');
-        }
+      }).catch(err => {
+        console.error('Registration error:', err);
+        showToast('Ошибка: ' + (err.message || 'Не удалось зарегистрироваться'), 'error');
       });
     }
 
