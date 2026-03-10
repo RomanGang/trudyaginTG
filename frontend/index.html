@@ -1974,7 +1974,6 @@
     
     function doRegister() {
       console.log('doRegister called, selectedRole:', selectedRole);
-      alert('Регистрация: роль=' + selectedRole);
       
       const name = document.getElementById('regName').value.trim();
       const phone = document.getElementById('regPhone').value.trim();
@@ -2007,7 +2006,7 @@
       showToast('Регистрация...', 'loading');
       
       console.log('Sending registration request to:', API_BASE + '/register');
-      console.log('Request body:', { name, phone, code, role, city, district });
+      console.log('Request body:', { name, phone, code, role: selectedRole, city, district });
       
       apiCall('/register', 'POST', {
         name: name,
@@ -2079,11 +2078,18 @@
     
     function selectRole(role) {
       selectedRole = role;
+      console.log('selectRole called, role:', role);
       
-      // Update UI
-      document.getElementById('roleWorker')?.classList.remove('selected');
-      document.getElementById('roleEmployer')?.classList.remove('selected');
-      document.getElementById('role' + role.charAt(0).toUpperCase() + role.slice(1))?.classList.add('selected');
+      // Update UI - remove selected from all
+      document.querySelectorAll('.role-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      
+      // Add selected to clicked card
+      const cardId = role === 'worker' ? 'roleWorker' : 'roleEmployer';
+      document.getElementById(cardId)?.classList.add('selected');
+      
+      console.log('selectedRole is now:', selectedRole);
     }
 
     // ==================== REGISTRATION (old) ====================
